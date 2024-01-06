@@ -491,7 +491,7 @@ begin
   Canvas.Clear;
   ProportionCorrection;
   SrcRect:=Classes.Rect(0,0,cell_pixel_width,cell_pixel_width);
-  if FStopDrawing then begin
+  if FStopDrawing and not FShowGrid then begin
     PaintStop;
     exit;
   end;
@@ -500,7 +500,7 @@ begin
     tile:=TTile(FTileList.Items[index]);
     if TileVisible(tile) then begin
       DstRect:=TileToCanvasRect(tile);
-      Canvas.CopyRect(DstRect,tile.Canvas,SrcRect);
+      if not FStopDrawing then Canvas.CopyRect(DstRect,tile.Canvas,SrcRect);
       if FShowGrid then begin
         Canvas.Pen.Color:=clRed;
         Canvas.Pen.Style:=psSolid;
