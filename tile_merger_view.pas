@@ -41,19 +41,18 @@ type
     property TileRect:TRect read GetTileRect;
     property Canvas:TCanvas read GetCanvas;
   public
-    function CreatePictureFromTile(AWidth,AHeight:Integer):TPicture;
-    procedure CopyRectToPicture(APicture:TPicture);
-  public
     constructor CreateFromFile(const AFileName:String;AFormat:TTileFormat);
-    constructor CreateFromBitMap(const ABitMap:TBitmap);
+    constructor CreateFromTiles(tiles:TList);
     destructor Destroy; override;
+  public
+    procedure Update(tile:TTile);
+    class procedure GetWorldRange(tiles:TList;out vLeft,vTop,vRight,vBottom:Int64);
   end;
 
     TTileViewer = class(TCustomControl)
   private
     FTileList:TList;
     FTileLevel:Byte;
-    FImageFormat:TTileFormat;
     FCanvasTop:Int64;
     FCanvasLeft:Int64;
     FCanvasWidth:Int64;
@@ -93,7 +92,7 @@ type
     function TileVisible(ATile:TTile):Boolean;
     function TileToCanvasRect(ATile:TTile):TRect;
     function CanvasCenter:TInt64Point;
-    procedure GetCanvasRange(var vLeft,vTop,vRight,vBottom:Int64);
+    procedure GetCanvasRange(out vLeft,vTop,vRight,vBottom:Int64);
     function CursorPoint(X,Y:Integer):TWebMercator;
     procedure MoveCanvas(X,Y:Int64);
     procedure PanToPoint(APoint:TInt64Point);
@@ -109,7 +108,7 @@ type
     procedure LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
     procedure SaveToGeoTiff(FilenameWithoutExt:String);
   public
-    constructor Create(AOwner:TComponent);
+    constructor Create(AOwner:TComponent); override;
     destructor Destroy; override;
   end;
 
@@ -173,71 +172,6 @@ begin
   FTileHeight:=AHeight;
 end;
 
-function TTile.CreatePictureFromTile(AWidth,AHeight:Integer):TPicture;
-begin
-  result:=TPicture.Create;
-  result.Bitmap.PixelFormat:=pf24bit;
-  result.Bitmap.SetSize(AWidth,AHeight);
-  result.Bitmap.CreateIntfImage;
-  {
-  case FImageFormat of
-    tfPNG:begin
-      result.PNG.PixelFormat:=FPicture.PNG.PixelFormat;
-      result.PNG.SetSize(AWidth,AHeight);
-      result.PNG.CreateIntfImage;
-    end;
-    tfJPG:begin
-      result.Jpeg.PixelFormat:=FPicture.Jpeg.PixelFormat;
-      result.Jpeg.SetSize(AWidth,AHeight);
-      result.Jpeg.CreateIntfImage;
-    end;
-    tfBMP:begin
-      result.Bitmap.PixelFormat:=FPicture.Bitmap.PixelFormat;
-      result.Bitmap.SetSize(AWidth,AHeight);
-      result.Bitmap.CreateIntfImage;
-    end;
-  end;
-  }
-end;
-
-procedure TTile.CopyRectToPicture(APicture:TPicture);
-var dstRect,srcRect:TRect;
-    px,py:integer;
-    tmpColor:TFPColor;
-begin
-  dstRect:=TileRect;
-  srcRect:=Classes.Rect(0,0,FPicture.Width,FPicture.Height);
-  case FImageFormat of
-    tfPNG:
-    begin
-      //APicture.PNG.Canvas.CopyRect(dstRect,FPicture.PNG.Canvas,srcRect);
-      for py:=0 to srcRect.Height-1 do
-        for px:=0 to srcRect.Width-1 do begin
-          FPicture.PNG.PaletteAllocated;
-          tmpColor:=FPicture.PNG.Canvas.Colors[px,py];
-
-          APicture.Bitmap.Canvas.Colors[dstRect.Left+px,dstRect.Top+py]:=tmpColor;
-        end;
-    end;
-    tfJPG:
-    begin
-      //APicture.Jpeg.Canvas.CopyRect(dstRect,FPicture.Jpeg.Canvas,srcRect);
-      for py:=0 to srcRect.Height-1 do
-        for px:=0 to srcRect.Width-1 do begin
-          APicture.Bitmap.Canvas.Colors[dstRect.Left+px,dstRect.Top+py]:=FPicture.Jpeg.Canvas.Colors[px,py];
-        end;
-    end;
-    tfBMP:
-    begin
-      //APicture.Bitmap.Canvas.CopyRect(dstRect,FPicture.Bitmap.Canvas,srcRect);
-      for py:=0 to srcRect.Height-1 do
-        for px:=0 to srcRect.Width-1 do begin
-          APicture.Bitmap.Canvas.Colors[dstRect.Left+px,dstRect.Top+py]:=FPicture.Bitmap.Canvas.Colors[px,py];
-        end;
-    end;
-  end;
-end;
-
 constructor TTile.CreateFromFile(const AFileName:String;AFormat:TTileFormat);
 begin
   inherited Create;
@@ -247,23 +181,92 @@ begin
     tfPNG:FPicture.PNG.LoadFromFile(AFileName);
     tfBMP:FPicture.Bitmap.LoadFromFile(AFileName);
     tfJPG:FPicture.Jpeg.LoadFromFile(AFileName);
-    else raise Exception.Create('无效的瓦片文件类型。');
   end;
   FImageFormat:=AFormat;
 end;
 
-constructor TTile.CreateFromBitMap(const ABitMap:TBitmap);
+constructor TTile.CreateFromTiles(tiles:TList);
+var len,idx:integer;
+    l,t,r,b:int64;
+    tmpTile:TTile;
 begin
   inherited Create;
-  FIndirect:=true;
+  FIndirect:=false;
   FPicture:=TPicture.Create;
-  FPicture.Bitmap:=ABitMap;
+  len:=tiles.Count;
+  if len<1 then raise Exception.Create('TTile.CreateFromTiles need at least one tile in tiles argument.');
+  tmpTile:=TTile(tiles[0]);
+  FImageFormat:=tmpTile.FImageFormat;
+  FTileTop:=tmpTile.FTileTop;
+  FTileLeft:=tmpTile.FTileLeft;
+  FTileWidth:=tmpTile.FTileWidth;
+  FTileHeight:=tmpTile.FTileHeight;
+  TTile.GetWorldRange(tiles,l,t,r,b);
+  SetTileRange(l,t,r-l,b-t);
+  case FImageFormat of
+    tfBMP:FPicture.Bitmap.SetSize(r-l,b-t);
+    tfJPG:FPicture.Jpeg.SetSize(r-l,b-t);
+    tfPNG:FPicture.PNG.SetSize(r-l,b-t);
+  end;
+  idx:=0;
+  while idx<len do begin
+    tmpTile:=TTile(tiles[idx]);
+    Update(tmpTile);
+    inc(idx);
+  end;
 end;
 
 destructor TTile.Destroy;
 begin
   FPicture.Free;
   inherited Destroy;
+end;
+
+procedure TTile.Update(tile:TTile);
+var csrc,cdst:TCanvas;
+    rsrc,rdst:TRect;
+begin
+  case Self.FImageFormat of
+    tfBMP:cdst:=Self.FPicture.Bitmap.Canvas;
+    tfJPG:cdst:=Self.FPicture.Jpeg.Canvas;
+    tfPNG:cdst:=Self.FPicture.PNG.Canvas;
+  end;
+  case tile.FImageFormat of
+    tfBMP:csrc:=tile.FPicture.Bitmap.Canvas;
+    tfJPG:csrc:=tile.FPicture.Jpeg.Canvas;
+    tfPNG:csrc:=tile.FPicture.PNG.Canvas;
+  end;
+  rdst:=tile.TileRect;
+  rsrc:=Classes.Rect(0,0,tile.FPicture.Width,tile.FPicture.Height);
+  rdst.Offset(-TileLeft,-TileTop);
+  cdst.CopyRect(rdst,csrc,rsrc);
+end;
+
+class procedure TTile.GetWorldRange(tiles:TList;out vLeft,vTop,vRight,vBottom:Int64);
+var len,t,l,r,b:int64;
+    index:integer;
+    tmpTile:TTile;
+begin
+  len:=tiles.Count;
+  if len<1 then exit;
+  tmpTile:=TTile(tiles[0]);
+  t:=tmpTile.TileTop;
+  l:=tmpTile.TileLeft;
+  r:=tmpTile.TileRight;
+  b:=tmpTile.TileBottom;
+  index:=1;
+  while index<len do begin
+    tmpTile:=TTile(tiles[index]);
+    if tmpTile.TileTop<t then t:=tmpTile.TileTop;
+    if tmpTile.TileLeft<l then l:=tmpTile.TileLeft;
+    if tmpTile.TileRight>r then r:=tmpTile.TileRight;
+    if tmpTile.TileBottom>b then b:=tmpTile.TileBottom;
+    inc(index);
+  end;
+  vTop:=t;
+  vLeft:=l;
+  vRight:=r;
+  vBottom:=b;
 end;
 
 { TTileViewer }
@@ -366,26 +369,10 @@ begin
   result.y:=FCanvasTop+FCanvasHeight div 2;
 end;
 
-procedure TTileViewer.GetCanvasRange(var vLeft,vTop,vRight,vBottom:Int64);
+procedure TTileViewer.GetCanvasRange(out vLeft,vTop,vRight,vBottom:Int64);
 var t,l,r,b:int64;
-    index:integer;
-    tmpTile:TTile;
 begin
-  if FTileList.Count<1 then exit;
-  tmpTile:=TTile(FTileList.Items[0]);
-  t:=tmpTile.TileTop;
-  l:=tmpTile.TileLeft;
-  r:=tmpTile.TileRight;
-  b:=tmpTile.TileBottom;
-  index:=1;
-  while index<FTileList.Count do begin
-    tmpTile:=TTile(FTileList.Items[index]);
-    if tmpTile.TileTop<t then t:=tmpTile.TileTop;
-    if tmpTile.TileLeft<l then l:=tmpTile.TileLeft;
-    if tmpTile.TileRight>r then r:=tmpTile.TileRight;
-    if tmpTile.TileBottom>b then b:=tmpTile.TileBottom;
-    inc(index);
-  end;
+  TTile.GetWorldRange(FTileList,l,t,r,b);
   vTop:=t;
   vLeft:=l;
   vRight:=r;
@@ -592,14 +579,11 @@ begin
 end;
 
 procedure TTileViewer.SaveToGeoTiff(FilenameWithoutExt:String);
-var index:integer;
-    StopDrawingState:boolean;
+var StopDrawingState:boolean;
     l,t,r,b:int64;
     w,h:integer;
-    tmpPicture:TPicture;
     tmpTfwFile:TStringList;
     tmpTile:TTile;
-    dstRect,srcRect:TRect;
     lt,rb:TDoublePoint;
 begin
   if FTileList.Count<1 then exit;
@@ -608,16 +592,10 @@ begin
   GetCanvasRange(l,t,r,b);
   w:=trunc(r-l);
   h:=trunc(b-t);
-  tmpPicture:=TTile(FTileList.Items[0]).CreatePictureFromTile(w,h);
+  tmpTile:=TTile.CreateFromTiles(FTileList);
   tmpTFWFile:=TStringList.Create;
   try
-    index:=0;
-    while index<FTileList.Count do begin
-      tmpTile:=TTile(FTileList.Items[index]);
-      tmpTile.CopyRectToPicture(tmpPicture);
-      inc(index);
-    end;
-    tmpPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
+    tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');  ;
     //GeoTiff里的exif信息要专门去写
     lt:=WebmercatorToXY(WebMercator(l,t,FTileLevel));
     rb:=WebmercatorToXY(WebMercator(r,b,FTileLevel));
@@ -631,7 +609,7 @@ begin
   finally
     StopDrawing:=StopDrawingState;
     tmpTfwFile.Free;
-    tmpPicture.Free;
+    tmpTile.Free;
   end;
 end;
 
