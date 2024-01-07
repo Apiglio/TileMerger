@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SpinEx, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, Spin, tile_merger_core, tile_merger_view;
+  StdCtrls, ExtCtrls, Spin, ComCtrls,
+  tile_merger_core, tile_merger_view, tile_merger_wmts_client;
 
 type
 
@@ -36,6 +37,7 @@ type
     Panel_viewer: TPanel;
     SpinEdit_load_level: TSpinEdit;
     SpinEditEx_level: TSpinEditEx;
+    TreeView_wmts_list: TTreeView;
     procedure Button_exportClick(Sender: TObject);
     procedure Button_testClick(Sender: TObject);
     procedure Button_wmtsClick(Sender: TObject);
@@ -52,6 +54,7 @@ type
 
 var
   FormTileMerger: TFormTileMerger;
+  WMTS_Client:TWMTS_Client;
 
 implementation
 
@@ -128,11 +131,27 @@ begin
 end;
 
 procedure TFormTileMerger.FormCreate(Sender: TObject);
+var root,node:TTreeNode;
+    server:TWMTS_Service;
+    len,idx:integer;
 begin
   FTileViewer:=TTileViewer.Create(Self);
   FTileViewer.Parent:=Panel_viewer;
   FTileViewer.Align:=alClient;
+  root:=TreeView_wmts_list.Items.Add(nil,'WMTS Servers');
+  server:=WMTS_Client.Services[0];
+  node:=TreeView_wmts_list.Items.AddChild(root,server.Title);
+  len:=server.LayerCount;
+  for idx:=0 to len-1 do begin
+    TreeView_wmts_list.Items.AddChild(node,server.Layers[idx].Title);
+  end;
 end;
+
+initialization
+  WMTS_Client:=TWMTS_Client.Create;
+
+finalization
+  WMTS_Client.Free;
 
 end.
 

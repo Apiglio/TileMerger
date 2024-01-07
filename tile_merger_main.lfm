@@ -121,10 +121,10 @@ object FormTileMerger: TFormTileMerger
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 531
+    Height = 195
     Top = 64
     Width = 398
-    Anchors = [akTop, akLeft, akRight, akBottom]
+    Anchors = [akTop, akLeft, akRight]
     TabOrder = 4
   end
   object Edit_folder: TEdit
@@ -348,5 +348,20 @@ object FormTileMerger: TFormTileMerger
     Caption = '拼接导出'
     OnClick = Button_exportClick
     TabOrder = 15
+  end
+  object TreeView_wmts_list: TTreeView
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Memo_test
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = FloatSpinEditEx_y
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 0
+    Height = 336
+    Top = 259
+    Width = 398
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    TabOrder = 16
   end
 end

@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, lazcontrols, tile_merger_main
+  Forms, lazcontrols, tile_merger_main, tile_merger_wmts_client
   { you can add units after this };
 
 {$R *.res}
