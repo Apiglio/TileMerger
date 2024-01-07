@@ -451,7 +451,7 @@ begin
     Canvas.Pen.Color:=clNone;
     Canvas.Brush.Color:=clWhite;
     Canvas.Brush.Style:=bsSolid;
-    prompt_cursor:=Format(' cx=%d  cy=%d',[wmct.coord.x,wmct.coord.y]);
+    prompt_cursor:=Format(' cx=%d  cy=%d  tx=%d  ty=%d',[wmct.coord.x,wmct.coord.y,wmct.coord.x div cell_pixel_width,wmct.coord.y div cell_pixel_width]);
     prompt_view:=Format(' cl=%d  cr=%d  ct=%d  cb=%d',[CanvasLeft,CanvasRight,CanvasTop,CanvasBottom]);
     wmct_cursor:=Format(' X=%f  Y=%f  lng=%3.6f  lat=%2.6f',[wmct_xy.x,wmct_xy.y,ltlg.x,ltlg.y]);
     wmct_view:=Format(' l=%f  r=%f  t=%f  b=%f',[wmct_lt.x,wmct_rb.x,wmct_lt.y,wmct_rb.y]);
