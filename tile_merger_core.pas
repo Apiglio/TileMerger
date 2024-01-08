@@ -8,6 +8,7 @@ uses
   Classes, SysUtils, math;
 
 const cell_pixel_width = 256;
+      webmercator_ec = 2*20037508.3427892;//equator circumference
 
 type
   TDoublePoint = record
@@ -28,6 +29,7 @@ function LatlongToWebmercator(latlong:TLatLong;level:integer):TWebMercator;
 function LatlongToWebmercatorXY(latlong:TLatLong):TDoublePoint;
 function WebmercatorToXY(wmct:TWebMercator):TDoublePoint;
 function WebmercatorToLatlong(wmct:TWebMercator):TLatLong;
+function WebmercatorXYToLatlong(wmct_xy:TDoublePoint):TLatLong;
 operator +(ina,inb:TDoublePoint):TDoublePoint;
 operator -(ina,inb:TDoublePoint):TDoublePoint;
 operator +(ina,inb:TInt64Point):TInt64Point;
@@ -82,14 +84,14 @@ begin
   lat:=latlong.y;
   rx:=(lng+180)/360;
   ry:=(arcsinh(tan(lat*pi/180.0))+pi)/pi/2;
-  result.x:=2*(rx-0.5)*20037508.3427892;
-  result.y:=-2*(0.5-ry)*20037508.3427892;
+  result.x:=(rx-0.5)*webmercator_ec;
+  result.y:=(ry-0.5)*webmercator_ec;
 end;
 
 function WebmercatorToXY(wmct:TWebMercator):TDoublePoint;
 begin
-  result.x:=2*(wmct.coord.x/pow(2,wmct.level)/cell_pixel_width-0.5)*20037508.3427892;
-  result.y:=-2*(wmct.coord.y/pow(2,wmct.level)/cell_pixel_width-0.5)*20037508.3427892;
+  result.x:=(wmct.coord.x/pow(2,wmct.level)/cell_pixel_width-0.5)*webmercator_ec;
+  result.y:=-(wmct.coord.y/pow(2,wmct.level)/cell_pixel_width-0.5)*webmercator_ec;
 end;
 
 (*
@@ -105,6 +107,15 @@ begin
   lat:=arctan(sinh(pi*(1-2*ry/pow(2,wmct.level))))*180/pi;
   result.x:=lng;
   result.y:=lat;
+end;
+
+function WebmercatorXYToLatlong(wmct_xy:TDoublePoint):TLatLong;
+var rx,ry:double;
+begin
+  rx:=wmct_xy.x/webmercator_ec+0.5;
+  ry:=0.5-wmct_xy.y/(-webmercator_ec);
+  result.x:=360*rx-180;
+  result.y:=180*arctan(sinh(2*pi*ry-pi))/pi;
 end;
 
 operator +(ina,inb:TDoublePoint):TDoublePoint;
