@@ -133,6 +133,7 @@ end;
 procedure TFormTileMerger.FormCreate(Sender: TObject);
 var root,node:TTreeNode;
     server:TWMTS_Service;
+    tmplayer:TWMTS_Layer;
     len,idx:integer;
 begin
   FTileViewer:=TTileViewer.Create(Self);
@@ -143,7 +144,8 @@ begin
   node:=TreeView_wmts_list.Items.AddChild(root,server.Title);
   len:=server.LayerCount;
   for idx:=0 to len-1 do begin
-    TreeView_wmts_list.Items.AddChild(node,server.Layers[idx].Title);
+    tmplayer:=server.Layers[idx];
+    TreeView_wmts_list.Items.AddChild(node,tmplayer.Title);
   end;
 end;
 

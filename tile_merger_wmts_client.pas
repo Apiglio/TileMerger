@@ -11,6 +11,9 @@ uses
 
 type
 
+  TWMTS_TileMatrix = class;
+  TWMTS_TileMatrixSet = class;
+
   TWMTS_Layer = class
   private
     FTitle:String;
@@ -20,12 +23,13 @@ type
   public
     property Title:String read FTitle;
   public
-    function URL(aLevel:byte;aRow,aCol:integer):string;
+    function URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
   end;
 
   TWMTS_TileMatrix = class
   private
-    FLevel:Byte;
+    FParent:TWMTS_TileMatrixSet;
+    FIdentifier:String;
     FScale:Double;
     FTileWidth,FTileHeight:Integer;
     FColumnCount,FRowCount:Int64;
@@ -95,9 +99,13 @@ implementation
 
 { TWMTS_Layer }
 
-function TWMTS_Layer.URL(aLevel:byte;aRow,aCol:integer):string;
+function TWMTS_Layer.URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
 begin
-
+  result:=FURLTemplate;
+  result:=StringReplace(result,'{TileMatrixSet}',aTileMatrix.FParent.FIdentifier,[rfIgnoreCase]);
+  result:=StringReplace(result,'{TileMatrix}',aTileMatrix.FIdentifier,[rfIgnoreCase]);
+  result:=StringReplace(result,'{TileRow}',IntToStr(aRow),[rfIgnoreCase]);
+  result:=StringReplace(result,'{TileCol}',IntToStr(aCol),[rfIgnoreCase]);
 end;
 
 
@@ -214,7 +222,8 @@ begin
               tilematrix_node:=content_node.ChildNodes[mt_idx];
               if tilematrix_node.NodeName<>'TileMatrix' then continue;
               tmpTileMatrix:=TWMTS_TileMatrix.Create;
-              tmpTileMatrix.FLevel:=StrToInt(tilematrix_node.FindNode('ows:Identifier').FirstChild.NodeValue);
+              tmpTileMatrix.FParent:=tmpTileMatrixSet;
+              tmpTileMatrix.FIdentifier:=tilematrix_node.FindNode('ows:Identifier').FirstChild.NodeValue;
               tmpTileMatrix.FScale:=StrToFloat(tilematrix_node.FindNode('ScaleDenominator').FirstChild.NodeValue);
               tmpTileMatrix.FTileWidth:=StrToInt(tilematrix_node.FindNode('TileWidth').FirstChild.NodeValue);
               tmpTileMatrix.FTileHeight:=StrToInt(tilematrix_node.FindNode('TileHeight').FirstChild.NodeValue);
