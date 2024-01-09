@@ -8,7 +8,8 @@ uses
   Classes, SysUtils, math;
 
 const cell_pixel_width = 256;
-      webmercator_ec = 2*20037508.3427892;//equator circumference
+      webmercator_ec = 2*20037508.3427892;  //equator circumference
+      webmercator_ms = 5.590822640285016E8; //WMTS L0 ScaleDenominator
 
 type
   TDoublePoint = record

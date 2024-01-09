@@ -14,6 +14,7 @@ type
   { TFormTileMerger }
 
   TFormTileMerger = class(TForm)
+    Button_showtiles: TButton;
     Button_export: TButton;
     Button_zoomtoworld: TButton;
     Button_wmts: TButton;
@@ -22,6 +23,7 @@ type
     CheckBox_ShowGrid: TCheckBox;
     CheckBox_ShowInfo: TCheckBox;
     ComboBox_imagetype: TComboBox;
+    Edit_currentstatus: TEdit;
     Edit_export: TEdit;
     Edit_folder: TEdit;
     FloatSpinEditEx_x: TFloatSpinEditEx;
@@ -39,6 +41,7 @@ type
     SpinEditEx_level: TSpinEditEx;
     TreeView_wmts_list: TTreeView;
     procedure Button_exportClick(Sender: TObject);
+    procedure Button_showtilesClick(Sender: TObject);
     procedure Button_testClick(Sender: TObject);
     procedure Button_wmtsClick(Sender: TObject);
     procedure Button_zoomtoworldClick(Sender: TObject);
@@ -46,6 +49,7 @@ type
     procedure CheckBox_ShowGridChange(Sender: TObject);
     procedure CheckBox_ShowInfoChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure TreeView_wmts_listSelectionChanged(Sender: TObject);
   private
     FTileViewer:TTileViewer;
   public
@@ -92,6 +96,11 @@ begin
   FTileViewer.SaveToGeoTiff(Edit_export.Text);
 end;
 
+procedure TFormTileMerger.Button_showtilesClick(Sender: TObject);
+begin
+  FTileViewer.ShowTiles;
+end;
+
 procedure TFormTileMerger.Button_wmtsClick(Sender: TObject);
 var image_format:string;
     tile_format:TTileFormat;
@@ -131,22 +140,46 @@ begin
 end;
 
 procedure TFormTileMerger.FormCreate(Sender: TObject);
-var root,node:TTreeNode;
+var root,node,lyr,tms:TTreeNode;
     server:TWMTS_Service;
     tmplayer:TWMTS_Layer;
+    tmpTMS:TWMTS_TileMatrixSet;
     len,idx:integer;
 begin
   FTileViewer:=TTileViewer.Create(Self);
   FTileViewer.Parent:=Panel_viewer;
   FTileViewer.Align:=alClient;
   root:=TreeView_wmts_list.Items.Add(nil,'WMTS Servers');
+  root.Data:=nil;
   server:=WMTS_Client.Services[0];
   node:=TreeView_wmts_list.Items.AddChild(root,server.Title);
+  node.Data:=server;
+  lyr:=TreeView_wmts_list.Items.AddChild(node,'Layers');
+  tms:=TreeView_wmts_list.Items.AddChild(node,'TileMatrixSets');
   len:=server.LayerCount;
   for idx:=0 to len-1 do begin
     tmplayer:=server.Layers[idx];
-    TreeView_wmts_list.Items.AddChild(node,tmplayer.Title);
+    TreeView_wmts_list.Items.AddChild(lyr,tmplayer.Title).Data:=tmplayer;
   end;
+  len:=server.TileMatrixSetCount;
+  for idx:=0 to len-1 do begin
+    tmpTMS:=server.TileMatrixSets[idx];
+    TreeView_wmts_list.Items.AddChild(tms,tmpTMS.Identifier).Data:=tmpTMS;
+  end;
+
+end;
+
+procedure TFormTileMerger.TreeView_wmts_listSelectionChanged(Sender: TObject);
+var DataObject:TObject;
+begin
+  DataObject:=TObject(TreeView_wmts_list.Selected.Data);
+  if DataObject=nil then exit;
+  if DataObject is TWMTS_Service then FTileViewer.CurrentService:=DataObject as TWMTS_Service;
+  if DataObject is TWMTS_Layer then FTileViewer.CurrentLayer:=DataObject as TWMTS_Layer;
+  if DataObject is TWMTS_TileMatrixSet then FTileViewer.CurrentTileMatrixSet:=DataObject as TWMTS_TileMatrixSet;
+  if FTileViewer.CurrentTileMatrixSet=nil then exit;
+  if FTileViewer.CurrentLayer=nil then exit;
+  Edit_currentstatus.Caption:='lyr='+FTileViewer.CurrentLayer.Title+'  tms='+FTileViewer.CurrentTileMatrixSet.Identifier;
 end;
 
 initialization

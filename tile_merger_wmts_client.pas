@@ -5,6 +5,9 @@ unit tile_merger_wmts_client;
 interface
 
 uses
+  {$ifdef UNIX}
+  cthreads,
+  {$endif}
   Classes, SysUtils, fphttpclient, openssl, DOM, XMLRead,
   Dialogs,
   tile_merger_core;
@@ -22,6 +25,7 @@ type
     FURLTemplate:String;
   public
     property Title:String read FTitle;
+    property Format:String read FFormat;
   public
     function URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
   end;
@@ -33,7 +37,14 @@ type
     FScale:Double;
     FTileWidth,FTileHeight:Integer;
     FColumnCount,FRowCount:Int64;
-    FTopLeft:TDoublePoint;
+    FLeftTop:TDoublePoint;
+  public
+    property LeftTop:TDoublePoint read FLeftTop;
+    property Scale:Double read FScale;
+    property Width:Integer read FTileWidth;
+    property Height:Integer read FTileHeight;
+    property ColumnCount:Int64 read FColumnCount;
+    property RowCount:Int64 read FRowCount;
   end;
 
   TWMTS_TileMatrixSet = class
@@ -46,8 +57,11 @@ type
     function GetTileMatrix(index:integer):TWMTS_TileMatrix;
     function GetTileMatrixCount:Integer;
   public
+    property Identifier:String read FIdentifier;
     property TileMatrixs[index:integer]:TWMTS_TileMatrix read GetTileMatrix;
     property TileMatrixCount:Integer read GetTileMatrixCount;
+  public
+    function BestFitTileMatrix(AScale:Double):TWMTS_TileMatrix;
   public
     procedure Clear;
     constructor Create;
@@ -94,7 +108,7 @@ type
   end;
 
 implementation
-
+uses tile_merger_view;
 
 
 { TWMTS_Layer }
@@ -122,6 +136,48 @@ end;
 function TWMTS_TileMatrixSet.GetTileMatrixCount:Integer;
 begin
   result:=FTileMatrixList.Count;
+end;
+
+function TWMTS_TileMatrixSet.BestFitTileMatrix(AScale:Double):TWMTS_TileMatrix;
+var idx,len:integer;
+    tm_1,tm_2,tm_3,tm_4,tmpTM:TWMTS_TileMatrix;
+    sca_1,sca_2,sca_3,sca_4,tmpScale:double;
+begin
+  result:=nil;
+  len:=FTileMatrixList.Count;
+  if len<1 then exit;
+  sca_1:=webmercator_ms;  //min scale
+  sca_2:=-1;              //max scale below (or equal to) AScale
+  sca_3:=webmercator_ms;  //min scale above (or equal to) AScale
+  sca_4:=-1;              //max scale
+  tm_1:=nil;
+  tm_2:=nil;
+  tm_3:=nil;
+  tm_4:=nil;
+  idx:=0;
+  while idx<len do begin
+    tmpTM:=TWMTS_TileMatrix(FTileMatrixList[idx]);
+    tmpScale:=tmpTM.FScale;
+    if tmpScale>sca_4 then begin
+      sca_4:=tmpScale;
+      tm_4:=tmpTM;
+    end;
+    if tmpScale<sca_1 then begin
+      sca_1:=tmpScale;
+      tm_1:=tmpTM;
+    end;
+    if (tmpScale>sca_2) and (tmpScale<=AScale) then begin
+      sca_2:=tmpScale;
+      tm_2:=tmpTM;
+    end;
+    if (tmpScale<sca_3) and (tmpScale>=AScale) then begin
+      sca_3:=tmpScale;
+      tm_3:=tmpTM;
+    end;
+    inc(idx);
+  end;
+  result:=tm_2;
+  if result=nil then result:=tm_1;
 end;
 
 procedure TWMTS_TileMatrixSet.Clear;
@@ -186,7 +242,13 @@ var manifest:TMemoryStream;
 begin
   manifest:=TMemoryStream.Create;
   try
-    TFPHTTPClient.SimpleGet(aUrl,manifest);
+    with TFPHTTPClient.Create(nil) do try
+      AllowRedirect:=true;
+      AddHeader('User-Agent','ArcGIS Client Using WinInet');
+      Get(aUrl,manifest);
+    finally
+      Free;
+    end;
     if manifest.Size=0 then exit;
     xml:=TXMLDocument.Create;
     try
@@ -234,8 +296,8 @@ begin
               poss:=pos(' ',px);
               System.Delete(px,poss,length(px));
               System.Delete(py,1,poss);
-              tmpTileMatrix.FTopLeft.x:=StrToFloat(px);
-              tmpTileMatrix.FTopLeft.y:=StrToFloat(py);
+              tmpTileMatrix.FLeftTop.x:=StrToFloat(px);
+              tmpTileMatrix.FLeftTop.y:=StrToFloat(py);
               tmpTileMatrixSet.FTileMatrixList.Add(tmpTileMatrix);
             end;
             FTileMatrixSetList.Add(tmpTileMatrixSet);

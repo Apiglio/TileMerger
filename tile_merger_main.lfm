@@ -351,17 +351,47 @@ object FormTileMerger: TFormTileMerger
   end
   object TreeView_wmts_list: TTreeView
     AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = Memo_test
+    AnchorSideTop.Control = Button_showtiles
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = FloatSpinEditEx_y
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 336
-    Top = 259
+    Height = 304
+    Top = 291
     Width = 398
     Anchors = [akTop, akLeft, akRight, akBottom]
     TabOrder = 16
+    OnSelectionChanged = TreeView_wmts_listSelectionChanged
+  end
+  object Edit_currentstatus: TEdit
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Memo_test
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Button_showtiles
+    Left = 0
+    Height = 32
+    Top = 259
+    Width = 296
+    Anchors = [akTop, akLeft, akRight]
+    TabOrder = 17
+  end
+  object Button_showtiles: TButton
+    AnchorSideLeft.Control = Edit_currentstatus
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_currentstatus
+    AnchorSideRight.Control = Memo_test
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Edit_currentstatus
+    AnchorSideBottom.Side = asrBottom
+    Left = 296
+    Height = 32
+    Top = 259
+    Width = 102
+    Anchors = [akTop, akRight, akBottom]
+    Caption = 'show tiles'
+    OnClick = Button_showtilesClick
+    TabOrder = 18
   end
 end

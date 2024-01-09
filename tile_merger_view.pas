@@ -5,11 +5,15 @@ unit tile_merger_view;
 interface
 
 uses
+  {$ifdef UNIX}
+  cthreads,
+  {$endif}
   Classes, SysUtils, Controls, Graphics, FileUtil, FPimage,
-  tile_merger_core;
+  fphttpclient, openssl, URIParser,
+  tile_merger_core, tile_merger_wmts_client;
 
 const ogc_ppi = 90.71446714322;
-      ogc_mm_per_pixel = 0.28;
+      ogc_mm_per_pixel = 0.00028;
 
 type
 
@@ -22,6 +26,7 @@ type
 
   TTile = class
     FPicture:TPicture;
+    FEnabled:Boolean;
     FIndirect:Boolean;
     FLeftTop:TDoublePoint;
     FScaleX:Double;
@@ -56,11 +61,51 @@ type
     function GetMercatorXY(canvas_point:TPoint):TDoublePoint;
   public
     constructor CreateFromFile(const AFileName:String;AFormat:TTileFormat);
+    constructor CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer);
     constructor CreateFromTiles(tiles:TList);
     destructor Destroy; override;
   public
     procedure Update(tile:TTile);
     class procedure GetWorldRange(tiles:TList;out vLeft,vTop,vRight,vBottom:Double);
+  private
+    FOnReady:TNotifyEvent;
+    FTileViewer:TObject;
+  public
+    property OnReady:TNotifyEvent read FOnReady write FOnReady;
+  end;
+
+  TFetchTileThread = class(TThread)
+  private
+    PTile:TTile;
+    FUrl:String;
+  public
+    procedure CheckURI (Sender: TObject; const ASrc: String; var ADest: String);
+    procedure FetchDone;
+    procedure Execute; override;
+  public
+    constructor Create(aTile:TTile;aUrl:String);
+  end;
+
+
+  TOnlineTile = class(TTile)
+  public
+    Layer:TWMTS_Layer;
+    TileMatrix:TWMTS_TileMatrix;
+    Row,Col:Integer;
+  end;
+
+  TTileViewerPool = class
+  private
+    FTileList:TList;
+    PTileViewer:TObject;
+  private
+    function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+  public
+    function GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
+    procedure Clear;
+  public
+    constructor Create(AOwner:TObject);
+    destructor Destroy; override;
   end;
 
   TTileViewer = class(TCustomControl)
@@ -71,7 +116,11 @@ type
     FScaleY:Double;
   private
     FTileList:TList;
+    FTilePool:TTileViewerPool;
     FTileLevel:Byte;
+    FCurrentService:TWMTS_Service;
+    FCurrentLayer:TWMTS_Layer;
+    FCurrentTileMatrixSet:TWMTS_TileMatrixSet;
     FMouseCursor:TPoint;
     FMovementCursor:TPoint;
     FMovementEnabled:Boolean;
@@ -81,6 +130,10 @@ type
     FShowInfo:Boolean;
     FStopDrawing:Boolean;
   public
+    property CurrentService:TWMTS_Service read FCurrentService write FCurrentService;
+    property CurrentLayer:TWMTS_Layer read FCurrentLayer write FCurrentLayer;
+    property CurrentTileMatrixSet:TWMTS_TileMatrixSet read FCurrentTileMatrixSet write FCurrentTileMatrixSet;
+    property TilePool:TTileViewerPool read FTilePool;
     property ShowGrid:Boolean read FShowGrid write FShowGrid;
     property ShowInfo:Boolean read FShowInfo write FShowInfo;
     property StopDrawing:Boolean read FStopDrawing write FStopDrawing;
@@ -124,6 +177,7 @@ type
     function CursorPoint(X,Y:Integer):TDoublePoint;
     procedure PanToPoint(APoint:TDoublePoint);
     procedure Zoom(AOrigin:TDoublePoint;AScale:Double);
+    procedure ZoomTo(AScale:Double);
     procedure ProportionCorrection;
     procedure PaintInfo;
     procedure PaintStop;
@@ -135,6 +189,9 @@ type
     procedure ZoomToWorld;
     procedure LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
     procedure SaveToGeoTiff(FilenameWithoutExt:String);
+    procedure ShowTiles;
+  public
+    procedure TileThreadTerminate(Sender:TObject);
   public
     constructor Create(AOwner:TComponent); override;
     destructor Destroy; override;
@@ -236,7 +293,9 @@ end;
 constructor TTile.CreateFromFile(const AFileName:String;AFormat:TTileFormat);
 begin
   inherited Create;
+  FOnReady:=nil;
   FIndirect:=false;
+  FEnabled:=true;
   FPicture:=TPicture.Create;
   case AFormat of
     tfPNG:FPicture.PNG.LoadFromFile(AFileName);
@@ -248,13 +307,44 @@ begin
   FImageFormat:=AFormat;
 end;
 
+constructor TTile.CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer);
+var tmpTileViewer:TTileViewer;
+begin
+  inherited Create;
+  tmpTileViewer:=ATileViewer as TTileViewer;
+  FTileViewer:=tmpTileViewer;
+  FOnReady:=@tmpTileViewer.TileThreadTerminate;
+  FIndirect:=false;
+  FEnabled:=false;//加载线程结束后修改为true
+  FPixelWidth:=ATileMatrix.Width;
+  FPixelHeight:=ATileMatrix.Height;
+  FLeftTop.x:=ATileMatrix.LeftTop.x+ACol*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Width);
+  FLeftTop.y:=ATileMatrix.LeftTop.y-ARow*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Height);
+  FScaleX:=ATileMatrix.Scale;
+  FScaleY:=ATileMatrix.Scale;
+  FPicture:=TPicture.Create;
+  case lowercase(ALayer.Format) of
+    'image/png':begin
+      FPicture.PNG.SetSize(FPixelWidth,FPixelHeight);
+      FImageFormat:=tfPNG;
+    end;
+    'image/jpeg':begin
+      FPicture.Jpeg.SetSize(FPixelWidth,FPixelHeight);
+      FImageFormat:=tfJPG;
+    end;
+    else raise Exception.Create('不支持的图像格式：'+ALayer.Format);
+  end;
+end;
+
 constructor TTile.CreateFromTiles(tiles:TList);
 var len,idx:integer;
     l,t,r,b:double;
     tmpTile:TTile;
 begin
   inherited Create;
+  FOnReady:=nil;
   FIndirect:=false;
+  FEnabled:=true;
   FPicture:=TPicture.Create;
   len:=tiles.Count;
   if len<1 then raise Exception.Create('TTile.CreateFromTiles need at least one tile in tiles argument.');
@@ -337,6 +427,120 @@ begin
   vRight:=r;
   vBottom:=b;
 end;
+
+{ TF
+etchTileThread }
+
+//Fixed by @wittbo on Lazarus Forum,
+//Source: https://forum.lazarus.freepascal.org/index.php/topic,43553.msg335901.html#msg335901
+procedure TFetchTileThread.CheckURI (Sender: TObject; const ASrc: String; var ADest: String);
+var newURI     : TURI;
+    OriginalURI: TURI;
+begin
+   newURI := ParseURI (ADest, False);
+   if (newURI.Host = '') then begin                         // NewURI does not contain protocol or host
+      OriginalURI          := ParseURI (ASrc, False);       // use the original URI...
+      OriginalURI.Path     := newURI.Path;                  // ... with the new subpage (path)...
+      OriginalURI.Document := newURI.Document;              // ... and the new document info...
+      ADest                := EncodeURI (OriginalURI)       // ... and return the complete redirected URI
+   end
+end;
+
+procedure TFetchTileThread.FetchDone;
+begin
+  PTile.FEnabled:=true;
+  if PTile.OnReady<>nil then PTile.OnReady(PTile);
+end;
+
+procedure TFetchTileThread.Execute;
+var content:TMemoryStream;
+begin
+  content:=TMemoryStream.Create;
+  try
+    with TFPHTTPClient.Create(nil) do try
+      AllowRedirect:=true;
+      OnRedirect:=@CheckURI;
+      AddHeader('User-Agent','ArcGIS Client Using WinInet');
+      Get(FUrl,content);
+    finally
+      Free;
+    end;
+    if content.Size=0 then exit;
+    content.Position:=0;
+    PTile.FPicture.LoadFromStream(content);
+    Synchronize(@FetchDone);
+  finally
+    content.Free;
+  end;
+end;
+
+constructor TFetchTileThread.Create(aTile:TTile;aUrl:String);
+begin
+  inherited Create(true);
+  FUrl:=aUrl;
+  PTile:=aTile;
+  FreeOnTerminate:=true;
+end;
+
+{ TTileViewerPool }
+
+function TTileViewerPool.FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+var thread:TFetchTileThread;
+begin
+  result:=TOnlineTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
+  thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,aRow,aCol));
+  thread.Execute;
+end;
+
+function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
+label NEXT;
+var idx,len:integer;
+    tmpTile:TOnlineTile;
+begin
+  //想办法改一种访问更快的散列表
+  len:=FTileList.Count;
+  idx:=0;
+  while idx<len do begin
+    tmpTile:=TOnlineTile(FTileList[idx]);
+    if aLayer<>tmpTile.Layer then goto NEXT;
+    if aTileMatrix<>tmpTile.TileMatrix then goto NEXT;
+    if aRow<>tmpTile.Row then goto NEXT;
+    if aCol<>tmpTile.Col then goto NEXT;
+    break;
+    NEXT:
+    inc(idx);
+  end;
+  if idx=len then begin
+    result:=FetchTile(aLayer,aTileMatrix,aRow,aCol);
+    FTileList.Add(result);
+  end else begin
+    result:=TOnlineTile(FTileList[idx]);
+  end;
+end;
+
+procedure TTileViewerPool.Clear;
+begin
+  while FTileList.Count>0 do begin
+    TOnlineTile(FTileList[0]).Free;
+    FTileList.Delete(0);
+  end;
+end;
+
+constructor TTileViewerPool.Create(AOwner:TObject);
+begin
+  inherited Create;
+  FTileList:=TList.Create;
+  PTileViewer:=AOwner;
+end;
+
+destructor TTileViewerPool.Destroy;
+begin
+  Clear;
+  FTileList.Free;
+  inherited Destroy;
+end;
+
+
 
 { TTileViewer }
 
@@ -510,6 +714,11 @@ begin
   FScaleY:=FScaleY*AScale;
 end;
 
+procedure TTileViewer.ZoomTo(AScale:Double);
+begin
+  Zoom(CanvasCenter,AScale/FScaleX);
+end;
+
 procedure TTileViewer.ProportionCorrection;
 var tt,ll,ww,hh:double;
 begin
@@ -541,7 +750,7 @@ begin
     Canvas.Brush.Color:=clWhite;
     Canvas.Brush.Style:=bsSolid;
     prompt_cursor:=Format(' cx=%d  cy=%d',[FMouseCursor.X,FMouseCursor.Y]);
-    prompt_view:='N/A';//Format(' cl=%f  cr=%f  ct=%f  cb=%f',[CanvasLeft,CanvasRight,CanvasTop,CanvasBottom]);
+    prompt_view:=Format(' scale_x=%f  scale_y=%f',[FScaleX,FScaleY]);
     wmct_cursor:=Format(' X=%f  Y=%f  lng=%3.6f  lat=%2.6f',[wmct_xy.x,wmct_xy.y,ltlg.x,ltlg.y]);
     wmct_view:=Format(' l=%f  r=%f  t=%f  b=%f',[wmct_lt.x,wmct_rb.x,wmct_lt.y,wmct_rb.y]);
     text_height:=Canvas.TextHeight(prompt_cursor);
@@ -605,12 +814,12 @@ begin
     exit;
   end;
   index:=0;
-  while index<FTileList.Count do begin
-    tile:=TTile(FTileList.Items[index]);
+  while index<{FTileList}FTilePool.FTileList.Count do begin
+    tile:=TTile({FTileList}FTilePool.FTileList.Items[index]);
     SrcRect:=Classes.Rect(0,0,tile.Width,tile.Height);
     if TileVisible(tile) then begin
       DstRect:=TileToCanvasRect(tile);
-      if not FStopDrawing then Canvas.CopyRect(DstRect,tile.Canvas,SrcRect);
+      if not FStopDrawing and tile.FEnabled then Canvas.CopyRect(DstRect,tile.Canvas,SrcRect);
       if FShowGrid then begin
         Canvas.Pen.Color:=clRed;
         Canvas.Pen.Style:=psSolid;
@@ -729,14 +938,45 @@ begin
   end;
 end;
 
+procedure TTileViewer.ShowTiles;
+var c1,c2,r1,r2,col,row:integer;
+    bestTM:TWMTS_TileMatrix;
+begin
+  TilePool.Clear;
+  bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX);
+  c1:=trunc((LeftTop.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
+  c2:=trunc((RightBottom.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
+  r1:=trunc((bestTM.LeftTop.y-LeftTop.y) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Height);
+  r2:=trunc((bestTM.LeftTop.y-RightBottom.y) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Height);
+  for col:=c1 to c2 do begin
+    for row:= r1 to r2 do begin
+      TilePool.GetTile(CurrentLayer,bestTM,row,col);
+    end;
+  end;
+end;
+
+procedure TTileViewer.TileThreadTerminate(Sender:TObject);
+begin
+  PaintTile(Sender as TOnlineTile);
+end;
+
 constructor TTileViewer.Create(AOwner:TComponent);
 begin
   inherited Create(AOwner);
   FTileList:=TList.Create;
+  FTilePool:=TTileViewerPool.Create(Self);
+  FCurrentTileMatrixSet:=nil;
+  FCurrentLayer:=nil;
+  FCurrentTileMatrixSet:=nil;
   FMovementEnabled:=false;
   FShowGrid:=false;
   FShowInfo:=false;
   FStopDrawing:=false;
+  //很随意的一个起始范围
+  FLeftTop.x:=13244000;
+  FLeftTop.y:=3034000;
+  FScaleX:=320000;
+  FScaleY:=320000;
   OnMouseWheel:=@MouseWheel;
   OnResize:=@ViewResize;
 end;
@@ -744,6 +984,8 @@ end;
 destructor TTileViewer.Destroy;
 begin
   Clear;
+  FTileList.Free;
+  FTilePool.Free;
   inherited Destroy;
 end;
 
