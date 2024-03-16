@@ -175,6 +175,7 @@ type
     function CanvasCenter:TDoublePoint;
     procedure GetCanvasRange(out vLeft,vTop,vRight,vBottom:Double);
     function CursorPoint(X,Y:Integer):TDoublePoint;
+    function LocatePoint(CoordX,CoordY:Double):TPoint;
     procedure PanToPoint(APoint:TDoublePoint);
     procedure Zoom(AOrigin:TDoublePoint;AScale:Double);
     procedure ZoomTo(AScale:Double);
@@ -184,9 +185,9 @@ type
     procedure PaintTile(ATile:TTile);
     procedure Paint; override;
   public
-    procedure Clear;
+    procedure Clear; virtual;
     procedure Refresh;
-    procedure ZoomToWorld;
+    procedure ZoomToWorld; virtual;
     procedure LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
     procedure SaveToGeoTiff(FilenameWithoutExt:String);
     procedure ShowTiles;
@@ -428,8 +429,7 @@ begin
   vBottom:=b;
 end;
 
-{ TF
-etchTileThread }
+{ TFetchTileThread }
 
 //Fixed by @wittbo on Lazarus Forum,
 //Source: https://forum.lazarus.freepascal.org/index.php/topic,43553.msg335901.html#msg335901
@@ -691,6 +691,12 @@ function TTileViewer.CursorPoint(X,Y:Integer):TDoublePoint;
 begin
   result.x:=FLeftTop.x+CanvasWidth*X/Width;
   result.y:=FLeftTop.y-CanvasHeight*Y/Height;
+end;
+
+function TTileViewer.LocatePoint(CoordX,CoordY:Double):TPoint;
+begin
+  result.X:=round(Width*(CoordX-FLeftTop.x)/CanvasWidth);
+  result.Y:=round(Height*(FLeftTop.y-CoordY)/CanvasHeight);
 end;
 
 procedure TTileViewer.PanToPoint(APoint:TDoublePoint);
