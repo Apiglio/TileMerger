@@ -74,38 +74,46 @@ type
     property OnReady:TNotifyEvent read FOnReady write FOnReady;
   end;
 
+  TOnlineTile = class(TTile)
+  private
+    FCachePath:String; //从TileViewPool中抄
+  protected
+    function GetCacheFileName:string;
+  public
+    Layer:TWMTS_Layer;
+    TileMatrix:TWMTS_TileMatrix;
+    Row,Col:Integer;
+  public
+    constructor CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer); reintroduce;
+    property CacheFileName:string read GetCacheFileName;
+  end;
+
+  TTileViewerPool = class
+  private
+    FTileList:TList;   // 实际上是OnlineTile列表
+    FCachePath:String; // 网络下载的瓦片暂存位置
+    PTileViewer:TObject;
+  private
+    function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+  public
+    function GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+    procedure Clear;
+    property CachePath:String read FCachePath write FCachePath;
+  public
+    constructor Create(AOwner:TObject);
+    destructor Destroy; override;
+  end;
+
   TFetchTileThread = class(TThread)
   private
-    PTile:TTile;
+    PTile:TOnlineTile;
     FUrl:String;
   public
     procedure CheckURI (Sender: TObject; const ASrc: String; var ADest: String);
     procedure FetchDone;
     procedure Execute; override;
   public
-    constructor Create(aTile:TTile;aUrl:String);
-  end;
-
-
-  TOnlineTile = class(TTile)
-  public
-    Layer:TWMTS_Layer;
-    TileMatrix:TWMTS_TileMatrix;
-    Row,Col:Integer;
-  end;
-
-  TTileViewerPool = class
-  private
-    FTileList:TList;
-    PTileViewer:TObject;
-  private
-    function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
-  public
-    function GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
-    procedure Clear;
-  public
-    constructor Create(AOwner:TObject);
-    destructor Destroy; override;
+    constructor Create(aTile:TOnlineTile;aUrl:String);
   end;
 
   TTileViewer = class(TCustomControl)
@@ -190,7 +198,7 @@ type
     procedure ZoomToWorld; virtual;
     procedure LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
     procedure SaveToGeoTiff(FilenameWithoutExt:String);
-    procedure ShowTiles;
+    procedure ShowTiles(AScale:Double=0); //从服务器加载瓦片数据，根据给定比例尺确定层级，比例尺小于等于0时根据地图比例尺自动选择最合适的层级
   public
     procedure TileThreadTerminate(Sender:TObject);
   public
@@ -455,6 +463,13 @@ end;
 procedure TFetchTileThread.Execute;
 var content:TMemoryStream;
 begin
+  //如果缓存文件能找到就不访问瓦片服务器
+  if FileExists(PTile.CacheFileName) then begin
+    PTile.FPicture.LoadFromFile(PTile.CacheFileName);
+    Synchronize(@FetchDone);
+    exit;
+  end;
+  //找不到再开始走访问流程
   content:=TMemoryStream.Create;
   try
     with TFPHTTPClient.Create(nil) do try
@@ -468,18 +483,43 @@ begin
     if content.Size=0 then exit;
     content.Position:=0;
     PTile.FPicture.LoadFromStream(content);
+    ForceDirectories(ExtractFileDir(PTile.CacheFileName));
+    PTile.FPicture.SaveToFile(PTile.CacheFileName);
     Synchronize(@FetchDone);
   finally
     content.Free;
   end;
 end;
 
-constructor TFetchTileThread.Create(aTile:TTile;aUrl:String);
+constructor TFetchTileThread.Create(aTile:TOnlineTile;aUrl:String);
 begin
   inherited Create(true);
   FUrl:=aUrl;
   PTile:=aTile;
   FreeOnTerminate:=true;
+end;
+
+
+{ TOnlineTile }
+
+function TOnlineTile.GetCacheFileName:string;
+begin
+  result:=FCachePath;
+  result:=result + DirectorySeparator + TileMatrix.Identifier;
+  result:=result + DirectorySeparator + IntToStr(Col);
+  result:=result + DirectorySeparator + IntToStr(Row);
+  result:=result + DirectorySeparator + TWMTS_Service(Layer.Service).Title;
+  result:=result + '#' + Layer.Title;
+  result:=result + '.' + Layer.TileExtent;
+end;
+
+constructor TOnlineTile.CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer);
+begin
+  inherited CreateFromLayer(ATileViewer,ALayer,ATileMatrix,ARow,ACol);
+  Layer:=ALayer;
+  TileMatrix:=ATileMatrix;
+  Col:=ACol;
+  Row:=ARow;
 end;
 
 { TTileViewerPool }
@@ -488,11 +528,12 @@ function TTileViewerPool.FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatr
 var thread:TFetchTileThread;
 begin
   result:=TOnlineTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
+  result.FCachePath:=Self.FCachePath;
   thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,aRow,aCol));
   thread.Execute;
 end;
 
-function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
+function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
 label NEXT;
 var idx,len:integer;
     tmpTile:TOnlineTile;
@@ -530,6 +571,7 @@ constructor TTileViewerPool.Create(AOwner:TObject);
 begin
   inherited Create;
   FTileList:=TList.Create;
+  FCachePath:='TilesCache';
   PTileViewer:=AOwner;
 end;
 
@@ -913,11 +955,11 @@ var StopDrawingState:boolean;
     tmpTile:TTile;
     lt,rb:TDoublePoint;
 begin
-  if FTileList.Count<1 then exit;
+  if FTilePool.FTileList.Count<1 then exit;
   StopDrawingState:=StopDrawing;
   StopDrawing:=true;
   GetCanvasRange(l,t,r,b);
-  tmpTile:=TTile.CreateFromTiles(FTileList);
+  tmpTile:=TTile.CreateFromTiles(FTilePool.FTileList);
   tmpTFWFile:=TStringList.Create;
   try
     tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
@@ -944,12 +986,15 @@ begin
   end;
 end;
 
-procedure TTileViewer.ShowTiles;
+procedure TTileViewer.ShowTiles(AScale:Double=0);
 var c1,c2,r1,r2,col,row:integer;
     bestTM:TWMTS_TileMatrix;
 begin
   TilePool.Clear;
-  bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX);
+  if AScale<=0 then
+      bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX)
+  else
+      bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(AScale);
   c1:=trunc((LeftTop.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
   c2:=trunc((RightBottom.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
   r1:=trunc((bestTM.LeftTop.y-LeftTop.y) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Height);

@@ -6,3 +6,4 @@
 *.tmp
 *.dll
 TileMerger
+/TilesCache

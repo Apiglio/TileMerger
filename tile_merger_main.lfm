@@ -1,7 +1,7 @@
 object FormTileMerger: TFormTileMerger
-  Left = 708
+  Left = 171
   Height = 595
-  Top = 437
+  Top = 534
   Width = 1255
   Caption = 'Tile Merger'
   ClientHeight = 595
@@ -73,7 +73,7 @@ object FormTileMerger: TFormTileMerger
     MaxLength = 0
     TabOrder = 3
     NullValue = 0
-    Value = 12
+    Value = 32
   end
   object Label_lng: TLabel
     AnchorSideLeft.Control = Owner
@@ -121,10 +121,11 @@ object FormTileMerger: TFormTileMerger
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 195
+    Height = 192
     Top = 64
     Width = 398
     Anchors = [akTop, akLeft, akRight]
+    ScrollBars = ssVertical
     TabOrder = 4
   end
   object Edit_folder: TEdit
@@ -358,8 +359,8 @@ object FormTileMerger: TFormTileMerger
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 304
-    Top = 291
+    Height = 307
+    Top = 288
     Width = 398
     Anchors = [akTop, akLeft, akRight, akBottom]
     TabOrder = 16
@@ -372,7 +373,7 @@ object FormTileMerger: TFormTileMerger
     AnchorSideRight.Control = Button_showtiles
     Left = 0
     Height = 32
-    Top = 259
+    Top = 256
     Width = 296
     Anchors = [akTop, akLeft, akRight]
     TabOrder = 17
@@ -387,7 +388,7 @@ object FormTileMerger: TFormTileMerger
     AnchorSideBottom.Side = asrBottom
     Left = 296
     Height = 32
-    Top = 259
+    Top = 256
     Width = 102
     Anchors = [akTop, akRight, akBottom]
     Caption = 'show tiles'

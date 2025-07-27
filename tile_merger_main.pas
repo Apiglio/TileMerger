@@ -97,8 +97,23 @@ begin
 end;
 
 procedure TFormTileMerger.Button_showtilesClick(Sender: TObject);
+var tmpTMS:TWMTS_TileMatrixSet;
+    tmpTM:TWMTS_TileMatrix;
 begin
-  FTileViewer.ShowTiles;
+  if (FTileViewer.CurrentLayer=nil) or (FTileViewer.CurrentTileMatrixSet=nil) then begin
+    Memo_test.Lines.Add('请先选择Layer和TileMatrix！！');
+    exit;
+  end;
+
+  Memo_test.Lines.Add('');
+  Memo_test.Lines.Add(Format('FScaleX = %3.1f',[FTileViewer.ScaleX]));
+
+  tmpTMS:=FTileViewer.CurrentTileMatrixSet;
+  tmpTM:=tmpTMS.TileMatrixs[SpinEditEx_level.Value];
+  if tmpTM=nil then
+    FTileViewer.ShowTiles
+  else
+    FTileViewer.ShowTiles(tmpTM.Scale);
 end;
 
 procedure TFormTileMerger.Button_wmtsClick(Sender: TObject);
@@ -171,6 +186,7 @@ end;
 
 procedure TFormTileMerger.TreeView_wmts_listSelectionChanged(Sender: TObject);
 var DataObject:TObject;
+    idx,len:integer;
 begin
   DataObject:=TObject(TreeView_wmts_list.Selected.Data);
   if DataObject=nil then exit;
@@ -180,6 +196,15 @@ begin
   if FTileViewer.CurrentTileMatrixSet=nil then exit;
   if FTileViewer.CurrentLayer=nil then exit;
   Edit_currentstatus.Caption:='lyr='+FTileViewer.CurrentLayer.Title+'  tms='+FTileViewer.CurrentTileMatrixSet.Identifier;
+  len:=FTileViewer.CurrentTileMatrixSet.TileMatrixCount;
+  Memo_test.Lines.Add('[CurrentTileMatrixSet]'+FTileViewer.CurrentTileMatrixSet.Identifier);
+  for idx:=0 to len-1 do
+    with FTileViewer.CurrentTileMatrixSet.TileMatrixs[idx] do begin
+      Memo_test.Lines.Add(Format('  Index  = %d',[idx]));
+      Memo_test.Lines.Add(Format('    Scale  = %3.1f',[Scale]));
+      Memo_test.Lines.Add(Format('    ColCnt = %d',[ColumnCount]));
+      Memo_test.Lines.Add(Format('    RowCnt = %d',[RowCount]));
+    end;
 end;
 
 initialization

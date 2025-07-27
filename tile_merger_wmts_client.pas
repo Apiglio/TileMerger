@@ -23,9 +23,14 @@ type
     FIdentifier:String;
     FFormat:String;
     FURLTemplate:String;
+    FService:TObject; //forward TWMTS_Service;
+  protected
+    function GetTileExtent:string;
   public
     property Title:String read FTitle;
     property Format:String read FFormat;
+    property Service:TObject read FService;
+    property TileExtent:string read GetTileExtent;
   public
     function URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
   end;
@@ -45,6 +50,7 @@ type
     property Height:Integer read FTileHeight;
     property ColumnCount:Int64 read FColumnCount;
     property RowCount:Int64 read FRowCount;
+    property Identifier:String read FIdentifier;
   end;
 
   TWMTS_TileMatrixSet = class
@@ -53,6 +59,7 @@ type
     FAbstract:String;
     FIdentifier:String;
     FTileMatrixList:TList;
+    FService:TObject; //forward TWMTS_Service;
   protected
     function GetTileMatrix(index:integer):TWMTS_TileMatrix;
     function GetTileMatrixCount:Integer;
@@ -61,7 +68,7 @@ type
     property TileMatrixs[index:integer]:TWMTS_TileMatrix read GetTileMatrix;
     property TileMatrixCount:Integer read GetTileMatrixCount;
   public
-    function BestFitTileMatrix(AScale:Double):TWMTS_TileMatrix;
+    function BestFitTileMatrix(AScale:Double):TWMTS_TileMatrix; //根据地图比例尺选择最合适的TileMatrix
   public
     procedure Clear;
     constructor Create;
@@ -112,6 +119,22 @@ uses tile_merger_view;
 
 
 { TWMTS_Layer }
+
+function TWMTS_Layer.GetTileExtent:string;
+begin
+  case lowercase(FFormat) of
+    'image/png':begin
+      result:='png';
+    end;
+    'image/jpeg':begin
+      result:='jpg';
+    end;
+    //'image/bmp':begin
+    //  result:='bmp'; //这里并不确定有没有bmp的瓦片
+    //end;
+    else result:='dat';
+  end;
+end;
 
 function TWMTS_Layer.URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
 begin
@@ -272,6 +295,7 @@ begin
             tmpLayer.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
             tmpLayer.FFormat:=content_node.FindNode('Format').FirstChild.NodeValue;
             tmpLayer.FURLTemplate:=content_node.FindNode('ResourceURL').Attributes.GetNamedItem('template').NodeValue;
+            tmpLayer.FService:=Self;
             FLayerList.Add(tmpLayer);
           end;
           'TileMatrixSet':begin
@@ -279,6 +303,7 @@ begin
             tmpTileMatrixSet.FTitle:=content_node.FindNode('ows:Title').FirstChild.NodeValue;
             tmpTileMatrixSet.FAbstract:=content_node.FindNode('ows:Abstract').FirstChild.NodeValue;
             tmpTileMatrixSet.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
+            tmpTileMatrixSet.FService:=Self;
             mt_len:=content_node.ChildNodes.Count;
             for mt_idx:=0 to mt_len-1 do begin
               tilematrix_node:=content_node.ChildNodes[mt_idx];
