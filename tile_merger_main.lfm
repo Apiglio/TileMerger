@@ -374,7 +374,7 @@ object FormTileMerger: TFormTileMerger
     Left = 0
     Height = 32
     Top = 256
-    Width = 296
+    Width = 196
     Anchors = [akTop, akLeft, akRight]
     TabOrder = 17
   end
@@ -382,11 +382,10 @@ object FormTileMerger: TFormTileMerger
     AnchorSideLeft.Control = Edit_currentstatus
     AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Control = Edit_currentstatus
-    AnchorSideRight.Control = Memo_test
-    AnchorSideRight.Side = asrBottom
+    AnchorSideRight.Control = CheckBox_AutoFetch
     AnchorSideBottom.Control = Edit_currentstatus
     AnchorSideBottom.Side = asrBottom
-    Left = 296
+    Left = 196
     Height = 32
     Top = 256
     Width = 102
@@ -394,5 +393,19 @@ object FormTileMerger: TFormTileMerger
     Caption = 'show tiles'
     OnClick = Button_showtilesClick
     TabOrder = 18
+  end
+  object CheckBox_AutoFetch: TCheckBox
+    AnchorSideTop.Control = Button_showtiles
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Memo_test
+    AnchorSideRight.Side = asrBottom
+    Left = 298
+    Height = 28
+    Top = 258
+    Width = 100
+    Anchors = [akTop, akRight]
+    Caption = '自动预览'
+    OnClick = CheckBox_AutoFetchClick
+    TabOrder = 19
   end
 end

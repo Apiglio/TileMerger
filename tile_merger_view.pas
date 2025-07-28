@@ -137,6 +137,9 @@ type
     FShowGrid:Boolean;
     FShowInfo:Boolean;
     FStopDrawing:Boolean;
+    FAutoFetchTile:Boolean;
+  protected
+    procedure SetAutoFetchTile(value:boolean);
   public
     property CurrentService:TWMTS_Service read FCurrentService write FCurrentService;
     property CurrentLayer:TWMTS_Layer read FCurrentLayer write FCurrentLayer;
@@ -145,6 +148,7 @@ type
     property ShowGrid:Boolean read FShowGrid write FShowGrid;
     property ShowInfo:Boolean read FShowInfo write FShowInfo;
     property StopDrawing:Boolean read FStopDrawing write FStopDrawing;
+    property AutoFetchTile:Boolean read FAutoFetchTile write SetAutoFetchTile;
   protected
     function GetRightBottom:TDoublePoint;
     function GetCanvasTop:Double;
@@ -471,12 +475,13 @@ begin
   end;
   //找不到再开始走访问流程
   content:=TMemoryStream.Create;
-  try
-    with TFPHTTPClient.Create(nil) do try
+  try //try
+    with TFPHTTPClient.Create(nil) do try try
       AllowRedirect:=true;
       OnRedirect:=@CheckURI;
       AddHeader('User-Agent','ArcGIS Client Using WinInet');
       Get(FUrl,content);
+    except {silent 404} end;
     finally
       Free;
     end;
@@ -486,6 +491,7 @@ begin
     ForceDirectories(ExtractFileDir(PTile.CacheFileName));
     PTile.FPicture.SaveToFile(PTile.CacheFileName);
     Synchronize(@FetchDone);
+  //except {silent unable-to-open} end;
   finally
     content.Free;
   end;
@@ -520,6 +526,7 @@ begin
   TileMatrix:=ATileMatrix;
   Col:=ACol;
   Row:=ARow;
+  FCachePath:='TilesCache';
 end;
 
 { TTileViewerPool }
@@ -530,7 +537,7 @@ begin
   result:=TOnlineTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
   result.FCachePath:=Self.FCachePath;
   thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,aRow,aCol));
-  thread.Execute;
+  thread.Start;
 end;
 
 function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
@@ -585,6 +592,12 @@ end;
 
 
 { TTileViewer }
+
+procedure TTileViewer.SetAutoFetchTile(value:boolean);
+begin
+  FAutoFetchTile:=value;
+  if value then ShowTiles;
+end;
 
 function TTileViewer.GetRightBottom:TDoublePoint;
 begin
@@ -695,6 +708,8 @@ end;
 
 procedure TTileViewer.ViewResize(Sender:TObject);
 begin
+  ProportionCorrection;
+  if FAutoFetchTile then ShowTiles;
   Paint;
 end;
 
@@ -747,6 +762,7 @@ begin
   offset.x:=CanvasWidth/2;
   offset.y:=-CanvasHeight/2;
   FLeftTop:=APoint-offset;
+  if FAutoFetchTile then ShowTiles;
 end;
 
 procedure TTileViewer.Zoom(AOrigin:TDoublePoint;AScale:Double);
@@ -760,6 +776,7 @@ begin
   FLeftTop.y:=AOrigin.y-offset.y;
   FScaleX:=FScaleX*AScale;
   FScaleY:=FScaleY*AScale;
+  if FAutoFetchTile then ShowTiles;
 end;
 
 procedure TTileViewer.ZoomTo(AScale:Double);
@@ -852,18 +869,31 @@ procedure TTileViewer.Paint;
 var index:integer;
     tile:TTile;
     SrcRect,DstRect:TRect;
+    bestTM:TWMTS_TileMatrix;
 begin
   Canvas.Brush.Color:=clWhite;
   Canvas.Brush.Style:=bsSolid;
   Canvas.Clear;
   ProportionCorrection;
+  if FCurrentTileMatrixSet<>nil then
+    bestTM:=FCurrentTileMatrixSet.BestFitTileMatrix(FScaleX)
+  else
+    bestTM:=nil;
   if FStopDrawing and not FShowGrid then begin
     PaintStop;
     exit;
   end;
   index:=0;
-  while index<{FTileList}FTilePool.FTileList.Count do begin
-    tile:=TTile({FTileList}FTilePool.FTileList.Items[index]);
+  while index<FTilePool.FTileList.Count do begin
+    tile:=TTile(FTilePool.FTileList.Items[index]);
+    //自动预览时限制非最佳层级瓦片的显示，这个逻辑还是不太清晰
+    if FAutoFetchTile then
+      if bestTM<>nil then
+        if tile.FScaleX<>bestTM.Scale then
+          begin
+            inc(index);
+            continue;
+          end;
     SrcRect:=Classes.Rect(0,0,tile.Width,tile.Height);
     if TileVisible(tile) then begin
       DstRect:=TileToCanvasRect(tile);
@@ -990,7 +1020,7 @@ procedure TTileViewer.ShowTiles(AScale:Double=0);
 var c1,c2,r1,r2,col,row:integer;
     bestTM:TWMTS_TileMatrix;
 begin
-  TilePool.Clear;
+  //TilePool.Clear; //不清空了，所有瓦片都留在池内
   if AScale<=0 then
       bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX)
   else
@@ -1023,6 +1053,7 @@ begin
   FShowGrid:=false;
   FShowInfo:=false;
   FStopDrawing:=false;
+  AutoFetchTile:=false;
   //很随意的一个起始范围
   FLeftTop.x:=13244000;
   FLeftTop.y:=3034000;

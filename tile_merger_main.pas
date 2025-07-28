@@ -19,6 +19,7 @@ type
     Button_zoomtoworld: TButton;
     Button_wmts: TButton;
     Button_test: TButton;
+    CheckBox_AutoFetch: TCheckBox;
     CheckBox_stopdrawing: TCheckBox;
     CheckBox_ShowGrid: TCheckBox;
     CheckBox_ShowInfo: TCheckBox;
@@ -45,6 +46,7 @@ type
     procedure Button_testClick(Sender: TObject);
     procedure Button_wmtsClick(Sender: TObject);
     procedure Button_zoomtoworldClick(Sender: TObject);
+    procedure CheckBox_AutoFetchClick(Sender: TObject);
     procedure CheckBox_stopdrawingChange(Sender: TObject);
     procedure CheckBox_ShowGridChange(Sender: TObject);
     procedure CheckBox_ShowInfoChange(Sender: TObject);
@@ -134,6 +136,11 @@ end;
 procedure TFormTileMerger.Button_zoomtoworldClick(Sender: TObject);
 begin
   FTileViewer.ZoomToWorld;
+end;
+
+procedure TFormTileMerger.CheckBox_AutoFetchClick(Sender: TObject);
+begin
+  FTileViewer.AutoFetchTile:=(Sender as TCheckBox).Checked;
 end;
 
 procedure TFormTileMerger.CheckBox_stopdrawingChange(Sender: TObject);
