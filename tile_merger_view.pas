@@ -140,10 +140,13 @@ type
     FAutoFetchTile:Boolean;
   protected
     procedure SetAutoFetchTile(value:boolean);
+    procedure SetCurrentService(value:TWMTS_Service);
+    procedure SetCurrentLayer(value:TWMTS_Layer);
+    procedure SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
   public
-    property CurrentService:TWMTS_Service read FCurrentService write FCurrentService;
-    property CurrentLayer:TWMTS_Layer read FCurrentLayer write FCurrentLayer;
-    property CurrentTileMatrixSet:TWMTS_TileMatrixSet read FCurrentTileMatrixSet write FCurrentTileMatrixSet;
+    property CurrentService:TWMTS_Service read FCurrentService write SetCurrentService;
+    property CurrentLayer:TWMTS_Layer read FCurrentLayer write SetCurrentLayer;
+    property CurrentTileMatrixSet:TWMTS_TileMatrixSet read FCurrentTileMatrixSet write SetCurrentTileMatrixSet;
     property TilePool:TTileViewerPool read FTilePool;
     property ShowGrid:Boolean read FShowGrid write FShowGrid;
     property ShowInfo:Boolean read FShowInfo write FShowInfo;
@@ -475,7 +478,7 @@ begin
   end;
   //找不到再开始走访问流程
   content:=TMemoryStream.Create;
-  try //try
+  try try
     with TFPHTTPClient.Create(nil) do try try
       AllowRedirect:=true;
       OnRedirect:=@CheckURI;
@@ -491,7 +494,7 @@ begin
     ForceDirectories(ExtractFileDir(PTile.CacheFileName));
     PTile.FPicture.SaveToFile(PTile.CacheFileName);
     Synchronize(@FetchDone);
-  //except {silent unable-to-open} end;
+  except {silent unable-to-open} end;
   finally
     content.Free;
   end;
@@ -546,6 +549,8 @@ var idx,len:integer;
     tmpTile:TOnlineTile;
 begin
   //想办法改一种访问更快的散列表
+  aRow:=(aRow+aTileMatrix.RowCount) mod aTileMatrix.RowCount;
+  aCol:=(aCol+aTileMatrix.ColumnCount) mod aTileMatrix.ColumnCount;
   len:=FTileList.Count;
   idx:=0;
   while idx<len do begin
@@ -597,6 +602,25 @@ procedure TTileViewer.SetAutoFetchTile(value:boolean);
 begin
   FAutoFetchTile:=value;
   if value then ShowTiles;
+end;
+
+procedure TTileViewer.SetCurrentService(value:TWMTS_Service);
+begin
+  FCurrentService:=value;
+end;
+
+procedure TTileViewer.SetCurrentLayer(value:TWMTS_Layer);
+begin
+  FCurrentLayer:=value;
+  if FAutoFetchTile then begin
+    FTilePool.Clear;
+    ShowTiles;
+  end;
+end;
+
+procedure TTileViewer.SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
+begin
+  FCurrentTileMatrixSet:=value;
 end;
 
 function TTileViewer.GetRightBottom:TDoublePoint;

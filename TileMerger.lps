@@ -9,8 +9,8 @@
         <Filename Value="TileMerger.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="3"/>
-        <CursorPos X="26" Y="18"/>
-        <UsageCount Value="162"/>
+        <CursorPos X="49" Y="10"/>
+        <UsageCount Value="167"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
@@ -19,10 +19,9 @@
         <ComponentName Value="FormTileMerger"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="141"/>
-        <CursorPos X="101" Y="148"/>
-        <UsageCount Value="162"/>
+        <TopLine Value="188"/>
+        <CursorPos X="9" Y="214"/>
+        <UsageCount Value="167"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit1>
@@ -31,25 +30,26 @@
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="4"/>
         <CursorPos X="56" Y="27"/>
-        <UsageCount Value="162"/>
+        <UsageCount Value="167"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="tile_merger_view.pas"/>
         <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="875"/>
-        <CursorPos X="26" Y="892"/>
-        <UsageCount Value="158"/>
+        <TopLine Value="592"/>
+        <CursorPos X="35" Y="614"/>
+        <UsageCount Value="163"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="tile_merger_wmts_client.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="152"/>
-        <CursorPos Y="170"/>
-        <UsageCount Value="107"/>
+        <TopLine Value="20"/>
+        <CursorPos X="38" Y="30"/>
+        <UsageCount Value="112"/>
         <Loaded Value="True"/>
       </Unit4>
       <Unit5>
@@ -59,7 +59,7 @@
         <WindowIndex Value="-1"/>
         <TopLine Value="-1"/>
         <CursorPos X="-1" Y="-1"/>
-        <UsageCount Value="104"/>
+        <UsageCount Value="109"/>
         <DefaultSyntaxHighlighter Value="None"/>
       </Unit5>
       <Unit6>
@@ -69,7 +69,7 @@
         <WindowIndex Value="-1"/>
         <TopLine Value="-1"/>
         <CursorPos X="-1" Y="-1"/>
-        <UsageCount Value="104"/>
+        <UsageCount Value="109"/>
         <DefaultSyntaxHighlighter Value="None"/>
       </Unit6>
       <Unit7>
@@ -307,124 +307,124 @@
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="696" Column="67" TopLine="676"/>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="85" Column="27" TopLine="57"/>
       </Position1>
       <Position2>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="188" Column="15" TopLine="171"/>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="143" Column="60" TopLine="141"/>
       </Position2>
       <Position3>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="207" Column="20" TopLine="181"/>
+        <Caret Line="153" Column="20" TopLine="129"/>
       </Position3>
       <Position4>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="190" Column="18" TopLine="162"/>
+        <Caret Line="598" Column="33" TopLine="590"/>
       </Position4>
       <Position5>
-        <Filename Value="tile_merger_main.pas"/>
-        <Caret Line="103" Column="78" TopLine="85"/>
+        <Filename Value="tile_merger_view.pas"/>
+        <Caret Line="709" TopLine="691"/>
       </Position5>
       <Position6>
-        <Filename Value="tile_merger_main.pas"/>
-        <Caret Line="105" Column="78" TopLine="87"/>
+        <Filename Value="tile_merger_view.pas"/>
+        <Caret Line="181" Column="25" TopLine="166"/>
       </Position6>
       <Position7>
-        <Filename Value="tile_merger_main.pas"/>
-        <Caret Line="147" Column="42" TopLine="126"/>
+        <Filename Value="tile_merger_view.pas"/>
+        <Caret Line="183" Column="25" TopLine="166"/>
       </Position7>
       <Position8>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="462" Column="20" TopLine="441"/>
+        <Caret Line="709" Column="33" TopLine="679"/>
       </Position8>
       <Position9>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="490" Column="53" TopLine="469"/>
+        <Caret Line="1061" Column="24" TopLine="1031"/>
       </Position9>
       <Position10>
-        <Filename Value="tile_merger_main.pas"/>
-        <Caret Line="85" Column="27" TopLine="57"/>
+        <Filename Value="tile_merger_view.pas"/>
+        <Caret Line="183" Column="25" TopLine="166"/>
       </Position10>
       <Position11>
-        <Filename Value="tile_merger_main.pas"/>
-        <Caret Line="143" Column="60" TopLine="141"/>
+        <Filename Value="tile_merger_view.pas"/>
+        <Caret Line="711" Column="3" TopLine="697"/>
       </Position11>
       <Position12>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="153" Column="20" TopLine="129"/>
+        <Caret Line="198" Column="18" TopLine="174"/>
       </Position12>
       <Position13>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="598" Column="33" TopLine="590"/>
+        <Caret Line="876" Column="23" TopLine="867"/>
       </Position13>
       <Position14>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="709" TopLine="691"/>
+        <Caret Line="194" Column="32" TopLine="177"/>
       </Position14>
       <Position15>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="181" Column="25" TopLine="166"/>
+        <Caret Line="711" Column="24" TopLine="691"/>
       </Position15>
       <Position16>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="183" Column="25" TopLine="166"/>
+        <Caret Line="765" Column="38" TopLine="741"/>
       </Position16>
       <Position17>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="709" Column="33" TopLine="679"/>
+        <Caret Line="713" Column="32" TopLine="691"/>
       </Position17>
       <Position18>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1061" Column="24" TopLine="1031"/>
+        <Caret Line="894" TopLine="875"/>
       </Position18>
       <Position19>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="183" Column="25" TopLine="166"/>
+        <Caret Line="893" Column="32" TopLine="847"/>
       </Position19>
       <Position20>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="711" Column="3" TopLine="697"/>
+        <Caret Line="534" TopLine="516"/>
       </Position20>
       <Position21>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="119" Column="3" TopLine="173"/>
+        <Caret Line="483" Column="31" TopLine="455"/>
       </Position21>
       <Position22>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="198" Column="18" TopLine="174"/>
+        <Caret Line="544" Column="91" TopLine="535"/>
       </Position22>
       <Position23>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="876" Column="23" TopLine="867"/>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="130" Column="38" TopLine="118"/>
       </Position23>
       <Position24>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="194" Column="32" TopLine="177"/>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="211" Column="62" TopLine="120"/>
       </Position24>
       <Position25>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="789" Column="3" TopLine="846"/>
+        <Caret Line="473" Column="46" TopLine="454"/>
       </Position25>
       <Position26>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="711" Column="24" TopLine="691"/>
+        <Caret Line="467" TopLine="587"/>
       </Position26>
       <Position27>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="712" Column="3" TopLine="877"/>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="141" TopLine="123"/>
       </Position27>
       <Position28>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="765" Column="38" TopLine="741"/>
+        <Caret Line="490" Column="37" TopLine="116"/>
       </Position28>
       <Position29>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="713" Column="32" TopLine="691"/>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="141" TopLine="123"/>
       </Position29>
       <Position30>
         <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="894" TopLine="875"/>
+        <Caret Line="142" Column="26" TopLine="134"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>
