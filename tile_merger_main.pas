@@ -122,6 +122,7 @@ procedure TFormTileMerger.Button_wmtsClick(Sender: TObject);
 var image_format:string;
     tile_format:TTileFormat;
 begin
+  {
   image_format:=ComboBox_imagetype.Items[ComboBox_imagetype.ItemIndex];
   FTileViewer.Clear;
   case lowercase(image_format) of
@@ -131,6 +132,7 @@ begin
   end;
   FTileViewer.LoadFromWMTS(Edit_folder.Text,SpinEdit_load_level.Value,tile_format);
   FTileViewer.ZoomToWorld;
+  }
 end;
 
 procedure TFormTileMerger.Button_zoomtoworldClick(Sender: TObject);
@@ -188,6 +190,9 @@ begin
     tmpTMS:=server.TileMatrixSets[idx];
     TreeView_wmts_list.Items.AddChild(tms,tmpTMS.Identifier).Data:=tmpTMS;
   end;
+  FTileViewer.CurrentLayer:=server.Layers[0];
+  FTileViewer.CurrentTileMatrixSet:=server.TileMatrixSets[0];
+  FTileViewer.AutoFetchTile:=true;
 
 end;
 

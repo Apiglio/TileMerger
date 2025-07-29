@@ -123,12 +123,13 @@ type
     FScaleX:Double;
     FScaleY:Double;
   private
-    FTileList:TList;
+    //FTileList:TList;
     FTilePool:TTileViewerPool;
     FTileLevel:Byte;
     FCurrentService:TWMTS_Service;
     FCurrentLayer:TWMTS_Layer;
     FCurrentTileMatrixSet:TWMTS_TileMatrixSet;
+    PBestTileMatrix:TWMTS_TileMatrix; //当前显示的最佳层级，在缩放时重新计算。如果没有选择TMS则始终为nil
     FMouseCursor:TPoint;
     FMovementCursor:TPoint;
     FMovementEnabled:Boolean;
@@ -203,7 +204,7 @@ type
     procedure Clear; virtual;
     procedure Refresh;
     procedure ZoomToWorld; virtual;
-    procedure LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
+    //procedure LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
     procedure SaveToGeoTiff(FilenameWithoutExt:String);
     procedure ShowTiles(AScale:Double=0); //从服务器加载瓦片数据，根据给定比例尺确定层级，比例尺小于等于0时根据地图比例尺自动选择最合适的层级
   public
@@ -621,6 +622,7 @@ end;
 procedure TTileViewer.SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
 begin
   FCurrentTileMatrixSet:=value;
+  PBestTileMatrix:=value.BestFitTileMatrix(FScaleX);
 end;
 
 function TTileViewer.GetRightBottom:TDoublePoint;
@@ -765,7 +767,7 @@ end;
 
 procedure TTileViewer.GetCanvasRange(out vLeft,vTop,vRight,vBottom:Double);
 begin
-  TTile.GetWorldRange(FTileList,vLeft,vTop,vRight,vBottom);
+  TTile.GetWorldRange(FTilePool.FTileList,vLeft,vTop,vRight,vBottom);
 end;
 
 function TTileViewer.CursorPoint(X,Y:Integer):TDoublePoint;
@@ -792,7 +794,7 @@ end;
 procedure TTileViewer.Zoom(AOrigin:TDoublePoint;AScale:Double);
 var offset:TDoublePoint;
 begin
-  if (AScale<0.01) or (AScale>100) then raise ETileRangeError.Create(AScale);
+  if (AScale<1e-9) or (AScale>1e9) then raise ETileRangeError.Create(AScale);
   offset:=AOrigin-FLeftTop;
   offset.x:=offset.x*AScale;
   offset.y:=offset.y*AScale;
@@ -800,6 +802,7 @@ begin
   FLeftTop.y:=AOrigin.y-offset.y;
   FScaleX:=FScaleX*AScale;
   FScaleY:=FScaleY*AScale;
+  if FCurrentTileMatrixSet<>nil then PBestTileMatrix:=FCurrentTileMatrixSet.BestFitTileMatrix(FScaleX);
   if FAutoFetchTile then ShowTiles;
 end;
 
@@ -826,7 +829,7 @@ procedure TTileViewer.PaintInfo;
 var wmct:TWebMercator;
     wmct_xy,wmct_lt,wmct_rb:TDoublePoint;
     ltlg:TLatLong;
-    prompt_cursor,prompt_view,wmct_cursor,wmct_view:string;
+    prompt_cursor,prompt_view,wmct_cursor,wmct_view,BestTM_Name:string;
     text_height,text_top,pw_cursor,pw_view,sw_cursor,sw_view,pl_view,sl_view:integer;
 begin
   if ShowInfo then begin
@@ -840,6 +843,7 @@ begin
     Canvas.Brush.Style:=bsSolid;
     prompt_cursor:=Format(' cx=%d  cy=%d',[FMouseCursor.X,FMouseCursor.Y]);
     prompt_view:=Format(' scale_x=%f  scale_y=%f',[FScaleX,FScaleY]);
+    if PBestTileMatrix<>nil then prompt_view:=Format(' level=%s %s',[PBestTileMatrix.Identifier,prompt_view]);
     wmct_cursor:=Format(' X=%f  Y=%f  lng=%3.6f  lat=%2.6f',[wmct_xy.x,wmct_xy.y,ltlg.x,ltlg.y]);
     wmct_view:=Format(' l=%f  r=%f  t=%f  b=%f',[wmct_lt.x,wmct_rb.x,wmct_lt.y,wmct_rb.y]);
     text_height:=Canvas.TextHeight(prompt_cursor);
@@ -938,9 +942,9 @@ end;
 
 procedure TTileViewer.Clear;
 begin
-  while FTileList.Count>0 do begin
-    TTile(FTileList.Items[0]).Free;
-    FTileList.Delete(0);
+  while FTilePool.FTileList.Count>0 do begin
+    TOnlineTile(FTilePool.FTileList.Items[0]).Free;
+    FTilePool.FTileList.Delete(0);
   end;
 end;
 
@@ -951,8 +955,14 @@ end;
 
 procedure TTileViewer.ZoomToWorld;
 var l,t,r,b,w,h:double;
+    origin:TDoublePoint;
 begin
-  GetCanvasRange(l,t,r,b);
+  {
+  l:=-20037508.3427892;
+  r:=+20037508.3427892;
+  t:=+20037508.3427892;
+  b:=-20037508.3427892;
+  //GetCanvasRange(l,t,r,b);
   w:=r-l;
   h:=t-b;
   view_proportion_correction(Width,Height,t,l,w,h);
@@ -961,8 +971,13 @@ begin
   CanvasWidth:=w;
   CanvasHeight:=h;
   Paint;
+  }
+  origin.x:=0;
+  origin.y:=0;
+  PanToPoint(origin);
+  ZoomTo(2.6e8);
 end;
-
+{
 procedure TTileViewer.LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
 var files:TStringList;
     rootpath,filename:string;
@@ -1001,7 +1016,7 @@ begin
     files.Free;
   end;
 end;
-
+}
 procedure TTileViewer.SaveToGeoTiff(FilenameWithoutExt:String);
 var StopDrawingState:boolean;
     l,t,r,b:double;
@@ -1061,14 +1076,17 @@ begin
 end;
 
 procedure TTileViewer.TileThreadTerminate(Sender:TObject);
+var tmpTile:TOnlineTile;
 begin
-  PaintTile(Sender as TOnlineTile);
+  tmpTile:=Sender as TOnlineTile;
+  if tmpTile.TileMatrix<>PBestTileMatrix then exit;
+  PaintTile(tmpTile);
 end;
 
 constructor TTileViewer.Create(AOwner:TComponent);
 begin
   inherited Create(AOwner);
-  FTileList:=TList.Create;
+  //FTileList:=TList.Create;
   FTilePool:=TTileViewerPool.Create(Self);
   FCurrentTileMatrixSet:=nil;
   FCurrentLayer:=nil;
@@ -1090,7 +1108,7 @@ end;
 destructor TTileViewer.Destroy;
 begin
   Clear;
-  FTileList.Free;
+  //FTileList.Free;
   FTilePool.Free;
   inherited Destroy;
 end;
