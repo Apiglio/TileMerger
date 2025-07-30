@@ -4,410 +4,145 @@ object FormTileMerger: TFormTileMerger
   Top = 344
   Width = 1255
   Caption = 'Tile Merger'
-  ClientHeight = 595
+  ClientHeight = 565
   ClientWidth = 1255
   DesignTimePPI = 144
+  Menu = MainMenu_TileMerger
   OnCreate = FormCreate
   Position = poScreenCenter
   LCLVersion = '1.8.4.0'
-  object Button_test: TButton
-    AnchorSideLeft.Control = SpinEditEx_level
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = SpinEditEx_level
-    AnchorSideRight.Control = FloatSpinEditEx_y
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = SpinEditEx_level
-    AnchorSideBottom.Side = asrBottom
-    Left = 139
-    Height = 32
-    Top = 32
-    Width = 259
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    Caption = '计算验证'
-    OnClick = Button_testClick
-    TabOrder = 0
-  end
-  object FloatSpinEditEx_x: TFloatSpinEditEx
-    AnchorSideLeft.Control = Label_lng
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Owner
-    Left = 59
-    Height = 32
-    Top = 0
-    Width = 140
-    MaxLength = 0
-    TabOrder = 1
-    DecimalPlaces = 7
-    Increment = 1
-    MaxValue = 180
-    MinValue = -180
-    NullValue = 0
-    Value = 109.23
-  end
-  object FloatSpinEditEx_y: TFloatSpinEditEx
-    AnchorSideLeft.Control = Label_lat
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Owner
-    Left = 258
-    Height = 32
-    Top = 0
-    Width = 140
-    MaxLength = 0
-    TabOrder = 2
-    DecimalPlaces = 7
-    Increment = 0.00001
-    MaxValue = 90
-    MinValue = -90
-    NullValue = 0
-    Value = 36.43
-  end
-  object SpinEditEx_level: TSpinEditEx
-    AnchorSideLeft.Control = Label_lvl
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = FloatSpinEditEx_x
-    AnchorSideTop.Side = asrBottom
-    Left = 59
-    Height = 32
-    Top = 32
-    Width = 80
-    MaxLength = 0
-    TabOrder = 3
-    NullValue = 0
-    Value = 32
-  end
-  object Label_lng: TLabel
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = FloatSpinEditEx_x
-    AnchorSideTop.Side = asrCenter
-    Left = 0
-    Height = 24
-    Top = 4
-    Width = 59
-    Caption = ' 经度：'
-    ParentColor = False
-    ParentFont = False
-  end
-  object Label_lat: TLabel
-    AnchorSideLeft.Control = FloatSpinEditEx_x
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = FloatSpinEditEx_y
-    AnchorSideTop.Side = asrCenter
-    Left = 199
-    Height = 24
-    Top = 4
-    Width = 59
-    Caption = ' 纬度：'
-    ParentColor = False
-    ParentFont = False
-  end
-  object Label_lvl: TLabel
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = SpinEditEx_level
-    AnchorSideTop.Side = asrCenter
-    Left = 0
-    Height = 24
-    Top = 36
-    Width = 59
-    Caption = ' 层级：'
-    ParentColor = False
-    ParentFont = False
-  end
-  object Memo_test: TMemo
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = Button_test
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = FloatSpinEditEx_y
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = Owner
-    AnchorSideBottom.Side = asrBottom
-    Left = 0
-    Height = 192
-    Top = 64
-    Width = 398
-    Anchors = [akTop, akLeft, akRight]
-    ScrollBars = ssVertical
-    TabOrder = 4
-  end
-  object Edit_folder: TEdit
-    AnchorSideLeft.Control = Label_folder
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Owner
-    AnchorSideRight.Control = Button_wmts
-    AnchorSideBottom.Control = FloatSpinEditEx_y
-    AnchorSideBottom.Side = asrBottom
-    Left = 846
-    Height = 32
-    Top = 0
-    Width = 304
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    TabOrder = 5
-    Text = 'K:\js\MapDownload\tiles'
-  end
-  object Label_folder: TLabel
-    AnchorSideLeft.Control = SpinEdit_load_level
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Edit_folder
-    AnchorSideTop.Side = asrCenter
-    Left = 751
-    Height = 24
-    Top = 4
-    Width = 95
-    Caption = ' 加载路径：'
-    ParentColor = False
-    ParentFont = False
-  end
   object Panel_viewer: TPanel
-    AnchorSideLeft.Control = Memo_test
+    AnchorSideLeft.Control = Splitter_MainV
     AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Button_zoomtoworld
-    AnchorSideTop.Side = asrBottom
+    AnchorSideTop.Control = Owner
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = Owner
-    AnchorSideBottom.Side = asrBottom
-    Left = 398
+    AnchorSideBottom.Control = StatusBar_TileMerger
+    Left = 328
     Height = 531
-    Top = 64
-    Width = 857
+    Top = 0
+    Width = 927
     Anchors = [akTop, akLeft, akRight, akBottom]
     Caption = 'Panel_viewer'
-    TabOrder = 6
-  end
-  object Button_wmts: TButton
-    AnchorSideTop.Control = Owner
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = FloatSpinEditEx_y
-    AnchorSideBottom.Side = asrBottom
-    Left = 1150
-    Height = 32
-    Top = 0
-    Width = 105
-    Anchors = [akTop, akRight, akBottom]
-    Caption = '加载wmts'
-    OnClick = Button_wmtsClick
-    TabOrder = 7
-  end
-  object Label_load_level: TLabel
-    AnchorSideLeft.Control = ComboBox_imagetype
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = FloatSpinEditEx_x
-    AnchorSideTop.Side = asrCenter
-    AnchorSideRight.Control = SpinEdit_load_level
-    Left = 576
-    Height = 24
-    Top = 4
-    Width = 100
-    Caption = '  加载层级：'
-    ParentColor = False
-    ParentFont = False
-  end
-  object SpinEdit_load_level: TSpinEdit
-    AnchorSideLeft.Control = Label_load_level
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Owner
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = FloatSpinEditEx_y
-    AnchorSideBottom.Side = asrBottom
-    Left = 676
-    Height = 32
-    Top = 0
-    Width = 75
-    Anchors = [akTop, akLeft, akBottom]
-    TabOrder = 8
-    Value = 2
-  end
-  object CheckBox_ShowGrid: TCheckBox
-    AnchorSideLeft.Control = Memo_test
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = FloatSpinEditEx_y
-    AnchorSideTop.Side = asrBottom
-    Left = 398
-    Height = 28
-    Top = 32
-    Width = 100
-    Caption = '显示格网'
-    OnChange = CheckBox_ShowGridChange
-    TabOrder = 9
-  end
-  object CheckBox_ShowInfo: TCheckBox
-    AnchorSideLeft.Control = CheckBox_ShowGrid
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = FloatSpinEditEx_y
-    AnchorSideTop.Side = asrBottom
-    Left = 498
-    Height = 28
-    Top = 32
-    Width = 100
-    Caption = '显示坐标'
-    OnChange = CheckBox_ShowInfoChange
-    TabOrder = 10
-  end
-  object Button_zoomtoworld: TButton
-    AnchorSideLeft.Control = CheckBox_stopdrawing
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Button_test
-    AnchorSideBottom.Control = Button_test
-    AnchorSideBottom.Side = asrBottom
-    Left = 698
-    Height = 32
-    Top = 32
-    Width = 110
-    Anchors = [akTop, akLeft, akBottom]
-    Caption = '缩放到全局'
-    OnClick = Button_zoomtoworldClick
-    TabOrder = 11
-  end
-  object Label_imagetype: TLabel
-    AnchorSideLeft.Control = FloatSpinEditEx_y
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = FloatSpinEditEx_y
-    AnchorSideTop.Side = asrCenter
-    Left = 398
-    Height = 24
-    Top = 4
-    Width = 100
-    Caption = '  图片格式：'
-    ParentColor = False
-  end
-  object ComboBox_imagetype: TComboBox
-    AnchorSideLeft.Control = Label_imagetype
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = FloatSpinEditEx_y
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = FloatSpinEditEx_y
-    AnchorSideBottom.Side = asrBottom
-    Left = 498
-    Height = 32
-    Top = 0
-    Width = 78
-    Anchors = [akTop, akLeft, akBottom]
-    ItemHeight = 24
-    ItemIndex = 0
-    Items.Strings = (
-      'png'
-      'jpg'
-      'bmp'
-    )
-    TabOrder = 12
-    Text = 'png'
-  end
-  object CheckBox_stopdrawing: TCheckBox
-    AnchorSideLeft.Control = CheckBox_ShowInfo
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = CheckBox_ShowInfo
-    AnchorSideTop.Side = asrCenter
-    Left = 598
-    Height = 28
-    Top = 32
-    Width = 100
-    Caption = '暂停绘制'
-    OnChange = CheckBox_stopdrawingChange
-    TabOrder = 13
+    TabOrder = 0
   end
   object Label_export: TLabel
-    AnchorSideLeft.Control = Button_zoomtoworld
     AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Button_zoomtoworld
     AnchorSideTop.Side = asrCenter
-    Left = 808
+    Left = 734
     Height = 24
-    Top = 36
+    Top = 87
     Width = 95
+    Anchors = []
     Caption = ' 导出路径：'
     ParentColor = False
   end
-  object Edit_export: TEdit
-    AnchorSideLeft.Control = Label_export
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Button_zoomtoworld
-    AnchorSideRight.Control = Button_export
-    AnchorSideBottom.Control = Button_zoomtoworld
-    AnchorSideBottom.Side = asrBottom
-    Left = 903
-    Height = 32
-    Top = 32
-    Width = 247
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    TabOrder = 14
-    Text = 'K:\js\MapDownload\tilemerge\new'
-  end
-  object Button_export: TButton
-    AnchorSideLeft.Control = Button_wmts
-    AnchorSideTop.Control = Button_zoomtoworld
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = Button_zoomtoworld
-    AnchorSideBottom.Side = asrBottom
-    Left = 1150
-    Height = 32
-    Top = 32
-    Width = 105
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    Caption = '拼接导出'
-    OnClick = Button_exportClick
-    TabOrder = 15
-  end
   object TreeView_wmts_list: TTreeView
     AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = Button_showtiles
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = FloatSpinEditEx_y
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = Owner
-    AnchorSideBottom.Side = asrBottom
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = Splitter_MainV
+    AnchorSideBottom.Control = StatusBar_TileMerger
     Left = 0
-    Height = 307
-    Top = 288
-    Width = 398
+    Height = 531
+    Top = 0
+    Width = 320
     Anchors = [akTop, akLeft, akRight, akBottom]
-    TabOrder = 16
+    TabOrder = 1
     OnSelectionChanged = TreeView_wmts_listSelectionChanged
   end
-  object Edit_currentstatus: TEdit
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = Memo_test
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = Button_showtiles
+  object StatusBar_TileMerger: TStatusBar
     Left = 0
-    Height = 32
-    Top = 256
-    Width = 196
-    Anchors = [akTop, akLeft, akRight]
-    TabOrder = 17
+    Height = 34
+    Top = 531
+    Width = 1255
+    Panels = <>
   end
-  object Button_showtiles: TButton
-    AnchorSideLeft.Control = Edit_currentstatus
-    AnchorSideLeft.Side = asrBottom
-    AnchorSideTop.Control = Edit_currentstatus
-    AnchorSideRight.Control = CheckBox_AutoFetch
-    AnchorSideBottom.Control = Edit_currentstatus
-    AnchorSideBottom.Side = asrBottom
-    Left = 196
-    Height = 32
-    Top = 256
-    Width = 102
-    Anchors = [akTop, akRight, akBottom]
-    Caption = 'show tiles'
-    OnClick = Button_showtilesClick
-    TabOrder = 18
+  object Splitter_MainV: TSplitter
+    AnchorSideTop.Control = Owner
+    AnchorSideBottom.Control = StatusBar_TileMerger
+    Left = 320
+    Height = 531
+    Top = 0
+    Width = 8
+    Align = alNone
+    Anchors = [akTop, akBottom]
   end
-  object CheckBox_AutoFetch: TCheckBox
-    AnchorSideTop.Control = Button_showtiles
-    AnchorSideTop.Side = asrCenter
-    AnchorSideRight.Control = Memo_test
-    AnchorSideRight.Side = asrBottom
-    Left = 298
-    Height = 28
-    Top = 258
-    Width = 100
-    Anchors = [akTop, akRight]
-    Caption = '自动预览'
-    Checked = True
-    OnClick = CheckBox_AutoFetchClick
-    State = cbChecked
-    TabOrder = 19
+  object MainMenu_TileMerger: TMainMenu
+    left = 960
+    top = 336
+    object MenuItem_Server: TMenuItem
+      Caption = '服务器'
+      object MenuItem_ServerAdd: TMenuItem
+        Caption = '服务器列表'
+        Enabled = False
+      end
+      object MenuItem_ServerToken: TMenuItem
+        Caption = '设置 token'
+        Enabled = False
+      end
+    end
+    object MenuItem_View: TMenuItem
+      Caption = '视图'
+      object MenuItem_ViewShowGrid: TMenuItem
+        Caption = '显示格网'
+        OnClick = MenuItem_ViewShowGridClick
+      end
+      object MenuItem_ViewShowInfo: TMenuItem
+        Caption = '显示坐标'
+        OnClick = MenuItem_ViewShowInfoClick
+      end
+      object MenuItem_ViewDiv01: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem_ViewAutoFetch: TMenuItem
+        Caption = '自动预览'
+        Checked = True
+        OnClick = MenuItem_ViewAutoFetchClick
+      end
+    end
+    object MenuItem_Download: TMenuItem
+      Caption = '下载'
+      object MenuItem_DownloadCachePath: TMenuItem
+        Caption = '缓存目录'
+      end
+      object MenuItem_DownloadMode: TMenuItem
+        Caption = '瓦片加载...'
+        Enabled = False
+        object MenuItem_DownloadModeManual: TMenuItem
+          Caption = '手动加载'
+        end
+        object MenuItem_DownloadModeAuto: TMenuItem
+          Caption = '自动加载'
+          Checked = True
+        end
+        object MenuItem_DownloadModeForce: TMenuItem
+          Caption = '强制加载'
+        end
+      end
+      object MenuItem_DownloadDiv01: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem_DownloadExport: TMenuItem
+        Caption = '拼合导出'
+        OnClick = MenuItem_DownloadExportClick
+      end
+    end
+    object MenuItem_Option: TMenuItem
+      Caption = '选项'
+      object MenuItem_OptionSetting: TMenuItem
+        Caption = '设置'
+        Enabled = False
+      end
+      object MenuItem_OptionLog: TMenuItem
+        Caption = '调试信息'
+        OnClick = MenuItem_OptionLogClick
+      end
+      object MenuItem_OptionDiv_01: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem_OptionAbout: TMenuItem
+        Caption = '关于'
+      end
+    end
   end
 end

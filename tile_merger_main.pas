@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SpinEx, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, Spin, ComCtrls,
+  StdCtrls, ExtCtrls, Spin, ComCtrls, Menus,
   tile_merger_core, tile_merger_view, tile_merger_wmts_client;
 
 type
@@ -14,43 +14,39 @@ type
   { TFormTileMerger }
 
   TFormTileMerger = class(TForm)
-    Button_showtiles: TButton;
-    Button_export: TButton;
-    Button_zoomtoworld: TButton;
-    Button_wmts: TButton;
-    Button_test: TButton;
-    CheckBox_AutoFetch: TCheckBox;
-    CheckBox_stopdrawing: TCheckBox;
-    CheckBox_ShowGrid: TCheckBox;
-    CheckBox_ShowInfo: TCheckBox;
-    ComboBox_imagetype: TComboBox;
-    Edit_currentstatus: TEdit;
-    Edit_export: TEdit;
-    Edit_folder: TEdit;
-    FloatSpinEditEx_x: TFloatSpinEditEx;
-    FloatSpinEditEx_y: TFloatSpinEditEx;
     Label_export: TLabel;
-    Label_imagetype: TLabel;
-    Label_load_level: TLabel;
-    Label_lng: TLabel;
-    Label_lat: TLabel;
-    Label_lvl: TLabel;
-    Label_folder: TLabel;
-    Memo_test: TMemo;
+    MainMenu_TileMerger: TMainMenu;
+    MenuItem_DownloadDiv01: TMenuItem;
+    MenuItem_DownloadExport: TMenuItem;
+    MenuItem_ViewDiv01: TMenuItem;
+    MenuItem_ViewAutoFetch: TMenuItem;
+    MenuItem_DownloadModeForce: TMenuItem;
+    MenuItem_DownloadModeAuto: TMenuItem;
+    MenuItem_DownloadModeManual: TMenuItem;
+    MenuItem_ServerToken: TMenuItem;
+    MenuItem_ViewShowInfo: TMenuItem;
+    MenuItem_ViewShowGrid: TMenuItem;
+    MenuItem_OptionDiv_01: TMenuItem;
+    MenuItem_OptionLog: TMenuItem;
+    MenuItem_OptionSetting: TMenuItem;
+    MenuItem_OptionAbout: TMenuItem;
+    MenuItem_Option: TMenuItem;
+    MenuItem_DownloadMode: TMenuItem;
+    MenuItem_DownloadCachePath: TMenuItem;
+    MenuItem_Download: TMenuItem;
+    MenuItem_View: TMenuItem;
+    MenuItem_ServerAdd: TMenuItem;
+    MenuItem_Server: TMenuItem;
     Panel_viewer: TPanel;
-    SpinEdit_load_level: TSpinEdit;
-    SpinEditEx_level: TSpinEditEx;
+    Splitter_MainV: TSplitter;
+    StatusBar_TileMerger: TStatusBar;
     TreeView_wmts_list: TTreeView;
-    procedure Button_exportClick(Sender: TObject);
-    procedure Button_showtilesClick(Sender: TObject);
-    procedure Button_testClick(Sender: TObject);
-    procedure Button_wmtsClick(Sender: TObject);
-    procedure Button_zoomtoworldClick(Sender: TObject);
-    procedure CheckBox_AutoFetchClick(Sender: TObject);
-    procedure CheckBox_stopdrawingChange(Sender: TObject);
-    procedure CheckBox_ShowGridChange(Sender: TObject);
-    procedure CheckBox_ShowInfoChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure MenuItem_DownloadExportClick(Sender: TObject);
+    procedure MenuItem_OptionLogClick(Sender: TObject);
+    procedure MenuItem_ViewAutoFetchClick(Sender: TObject);
+    procedure MenuItem_ViewShowGridClick(Sender: TObject);
+    procedure MenuItem_ViewShowInfoClick(Sender: TObject);
     procedure TreeView_wmts_listSelectionChanged(Sender: TObject);
   private
     FTileViewer:TTileViewer;
@@ -63,105 +59,11 @@ var
   WMTS_Client:TWMTS_Client;
 
 implementation
+uses debugline, exporttiff;
 
 {$R *.lfm}
 
 { TFormTileMerger }
-
-procedure TFormTileMerger.Button_testClick(Sender: TObject);
-const sp = '';
-var tmpLL:TLatLong;
-    tmpLv:Integer;
-    tmpWM:TWebMercator;
-    tmpWMXY:TDoublePoint;
-    tmpLL_calc:TLatLong;
-begin
-  tmpLL.x:=FloatSpinEditEx_x.Value;
-  tmpLL.y:=FloatSpinEditEx_y.Value;
-  tmpLv:=SpinEditEx_level.Value;
-  tmpWM:=LatlongToWebmercator(tmpLL,tmpLv);
-  tmpLL_calc:=WebmercatorToLatlong(tmpWM);
-  tmpWMXY:=WebmercatorToXY(tmpWM);
-  //tmpWMXY:=LatlongToWebmercatorXY(tmpLL);
-  Memo_test.Lines.Add(
-    Format(
-      '[%03.5f, '+sp+'%02.5f] '+sp+sp+'  (%d, '+sp+'%d, '+sp+'%d)'+sp+sp
-      +'  [%03.5f, '+sp+'%02.5f]'+sp+sp+'  (%f, '+sp+'%f)',
-      [tmpLL.x,tmpLL.y,tmpWM.coord.x,tmpWM.coord.y,tmpWM.level,
-      tmpLL_calc.x,tmpLL_calc.y,tmpWMXY.x,tmpWMXY.y])
-  );
-end;
-
-procedure TFormTileMerger.Button_exportClick(Sender: TObject);
-begin
-  ForceDirectories(ExtractFileDir(Edit_export.Text));
-  FTileViewer.SaveToGeoTiff(Edit_export.Text);
-end;
-
-procedure TFormTileMerger.Button_showtilesClick(Sender: TObject);
-var tmpTMS:TWMTS_TileMatrixSet;
-    tmpTM:TWMTS_TileMatrix;
-begin
-  if (FTileViewer.CurrentLayer=nil) or (FTileViewer.CurrentTileMatrixSet=nil) then begin
-    Memo_test.Lines.Add('请先选择Layer和TileMatrix！！');
-    exit;
-  end;
-
-  Memo_test.Lines.Add('');
-  Memo_test.Lines.Add(Format('FScaleX = %3.1f',[FTileViewer.ScaleX]));
-
-  tmpTMS:=FTileViewer.CurrentTileMatrixSet;
-  tmpTM:=tmpTMS.TileMatrixs[SpinEditEx_level.Value];
-  if tmpTM=nil then
-    FTileViewer.ShowTiles
-  else
-    FTileViewer.ShowTiles(tmpTM.Scale);
-end;
-
-procedure TFormTileMerger.Button_wmtsClick(Sender: TObject);
-var image_format:string;
-    tile_format:TTileFormat;
-begin
-  {
-  image_format:=ComboBox_imagetype.Items[ComboBox_imagetype.ItemIndex];
-  FTileViewer.Clear;
-  case lowercase(image_format) of
-    'png':tile_format:=tfPNG;
-    'bmp':tile_format:=tfBMP;
-    else tile_format:=tfJPG;
-  end;
-  FTileViewer.LoadFromWMTS(Edit_folder.Text,SpinEdit_load_level.Value,tile_format);
-  FTileViewer.ZoomToWorld;
-  }
-end;
-
-procedure TFormTileMerger.Button_zoomtoworldClick(Sender: TObject);
-begin
-  FTileViewer.ZoomToWorld;
-end;
-
-procedure TFormTileMerger.CheckBox_AutoFetchClick(Sender: TObject);
-begin
-  FTileViewer.AutoFetchTile:=(Sender as TCheckBox).Checked;
-end;
-
-procedure TFormTileMerger.CheckBox_stopdrawingChange(Sender: TObject);
-begin
-  FTileViewer.StopDrawing:=CheckBox_stopdrawing.Checked;
-  FTileViewer.Refresh;
-end;
-
-procedure TFormTileMerger.CheckBox_ShowGridChange(Sender: TObject);
-begin
-  FTileViewer.ShowGrid:=CheckBox_ShowGrid.Checked;
-  FTileViewer.Refresh;
-end;
-
-procedure TFormTileMerger.CheckBox_ShowInfoChange(Sender: TObject);
-begin
-  FTileViewer.ShowInfo:=CheckBox_ShowInfo.Checked;
-  FTileViewer.Refresh;
-end;
 
 procedure TFormTileMerger.FormCreate(Sender: TObject);
 var root,node,lyr,tms:TTreeNode;
@@ -196,6 +98,36 @@ begin
 
 end;
 
+procedure TFormTileMerger.MenuItem_DownloadExportClick(Sender: TObject);
+begin
+  Form_ExportTiff.Execute(FTileViewer, FTileViewer.CurrentLayer, FTileViewer.CurrentTileMatrixSet);
+end;
+
+procedure TFormTileMerger.MenuItem_OptionLogClick(Sender: TObject);
+begin
+  Form_Debug.Show;
+end;
+
+procedure TFormTileMerger.MenuItem_ViewAutoFetchClick(Sender: TObject);
+begin
+  FTileViewer.AutoFetchTile:=not MenuItem_ViewAutoFetch.Checked;
+  MenuItem_ViewAutoFetch.Checked:=FTileViewer.AutoFetchTile;
+end;
+
+procedure TFormTileMerger.MenuItem_ViewShowGridClick(Sender: TObject);
+begin
+  FTileViewer.ShowGrid:=not MenuItem_ViewShowGrid.Checked;
+  MenuItem_ViewShowGrid.Checked:=FTileViewer.ShowGrid;
+  FTileViewer.Refresh;
+end;
+
+procedure TFormTileMerger.MenuItem_ViewShowInfoClick(Sender: TObject);
+begin
+  FTileViewer.ShowInfo:=not MenuItem_ViewShowInfo.Checked;
+  MenuItem_ViewShowInfo.Checked:=FTileViewer.ShowInfo;
+  FTileViewer.Refresh;
+end;
+
 procedure TFormTileMerger.TreeView_wmts_listSelectionChanged(Sender: TObject);
 var DataObject:TObject;
     idx,len:integer;
@@ -207,15 +139,14 @@ begin
   if DataObject is TWMTS_TileMatrixSet then FTileViewer.CurrentTileMatrixSet:=DataObject as TWMTS_TileMatrixSet;
   if FTileViewer.CurrentTileMatrixSet=nil then exit;
   if FTileViewer.CurrentLayer=nil then exit;
-  Edit_currentstatus.Caption:='lyr='+FTileViewer.CurrentLayer.Title+'  tms='+FTileViewer.CurrentTileMatrixSet.Identifier;
   len:=FTileViewer.CurrentTileMatrixSet.TileMatrixCount;
-  Memo_test.Lines.Add('[CurrentTileMatrixSet]'+FTileViewer.CurrentTileMatrixSet.Identifier);
+  Form_Debug.AddMessage('[CurrentTileMatrixSet]'+FTileViewer.CurrentTileMatrixSet.Identifier);
   for idx:=0 to len-1 do
     with FTileViewer.CurrentTileMatrixSet.TileMatrixs[idx] do begin
-      Memo_test.Lines.Add(Format('  Index  = %d',[idx]));
-      Memo_test.Lines.Add(Format('    Scale  = %3.1f',[Scale]));
-      Memo_test.Lines.Add(Format('    ColCnt = %d',[ColumnCount]));
-      Memo_test.Lines.Add(Format('    RowCnt = %d',[RowCount]));
+      Form_Debug.AddMessage(Format('  Index  = %d',[idx]));
+      Form_Debug.AddMessage(Format('    Scale  = %3.1f',[Scale]));
+      Form_Debug.AddMessage(Format('    ColCnt = %d',[ColumnCount]));
+      Form_Debug.AddMessage(Format('    RowCnt = %d',[RowCount]));
     end;
 end;
 

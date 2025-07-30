@@ -1,0 +1,42 @@
+object Form_Debug: TForm_Debug
+  Left = 1065
+  Height = 328
+  Top = 541
+  Width = 480
+  Caption = '调试信息'
+  ClientHeight = 328
+  ClientWidth = 480
+  DesignTimePPI = 144
+  OnDeactivate = FormDeactivate
+  Position = poMainFormCenter
+  LCLVersion = '1.8.4.0'
+  object Memo_DebugLine: TMemo
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Button_DebugLineClear
+    Left = 0
+    Height = 287
+    Top = 0
+    Width = 480
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    ScrollBars = ssAutoVertical
+    TabOrder = 0
+  end
+  object Button_DebugLineClear: TButton
+    AnchorSideLeft.Control = Owner
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 0
+    Height = 41
+    Top = 287
+    Width = 480
+    Anchors = [akLeft, akRight, akBottom]
+    Caption = '清空'
+    OnClick = Button_DebugLineClearClick
+    TabOrder = 1
+  end
+end
