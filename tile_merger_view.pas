@@ -8,7 +8,7 @@ uses
   {$ifdef UNIX}
   cthreads,
   {$endif}
-  Classes, SysUtils, Controls, Graphics, FileUtil, FPimage,
+  Classes, SysUtils, Controls, Graphics, FileUtil, FPimage, FPWriteTIFF,
   fphttpclient, openssl, URIParser,
   tile_merger_core, tile_merger_wmts_client;
 
@@ -104,16 +104,24 @@ type
     destructor Destroy; override;
   end;
 
+  TFetchTileResult = (ftrError, ftrCache, ftrWmtsFail, ftrSaved, ftrConflict);
+  //获取瓦片的结果：Error在任务开始前出错，Cache从缓存中加载，WmtsFail下载失败，
+  //                Saved下载成功并缓存，Conflict下载成功但缓存失败
+
   TFetchTileThread = class(TThread)
   private
     PTile:TOnlineTile;
     FUrl:String;
+    FForceFetch:Boolean; //无论是否有缓存均下载瓦片并缓存（需要考虑线程竞争）
+    FFetchResult:TFetchTileResult;
+    FStartTime:TDateTime;
   public
     procedure CheckURI (Sender: TObject; const ASrc: String; var ADest: String);
+    procedure FetchInit;
     procedure FetchDone;
     procedure Execute; override;
   public
-    constructor Create(aTile:TOnlineTile;aUrl:String);
+    constructor Create(aTile:TOnlineTile;aUrl:String;aForceFetch:Boolean);
   end;
 
   TTileViewer = class(TCustomControl)
@@ -123,10 +131,8 @@ type
     FScaleX:Double;
     FScaleY:Double;
   private
-    //FTileList:TList;
-    FTilePool:TTileViewerPool;
-    FTileLevel:Byte;
-    FCurrentService:TWMTS_Service;
+    FTilePool:TTileViewerPool;   //用于预览显示
+    FExportPool:TTileViewerPool; //用于图片导出
     FCurrentLayer:TWMTS_Layer;
     FCurrentTileMatrixSet:TWMTS_TileMatrixSet;
     PBestTileMatrix:TWMTS_TileMatrix; //当前显示的最佳层级，在缩放时重新计算。如果没有选择TMS则始终为nil
@@ -139,13 +145,16 @@ type
     FShowInfo:Boolean;
     FStopDrawing:Boolean;
     FAutoFetchTile:Boolean;
+    FForceFetchTile:Boolean;
   protected
     procedure SetAutoFetchTile(value:boolean);
-    procedure SetCurrentService(value:TWMTS_Service);
+    procedure SetForceFetchTile(value:boolean);
+    function GetCurrentService:TWMTS_Service;
     procedure SetCurrentLayer(value:TWMTS_Layer);
     procedure SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
+    function GetCachePath:string;
   public
-    property CurrentService:TWMTS_Service read FCurrentService write SetCurrentService;
+    property CurrentService:TWMTS_Service read GetCurrentService;
     property CurrentLayer:TWMTS_Layer read FCurrentLayer write SetCurrentLayer;
     property CurrentTileMatrixSet:TWMTS_TileMatrixSet read FCurrentTileMatrixSet write SetCurrentTileMatrixSet;
     property TilePool:TTileViewerPool read FTilePool;
@@ -153,6 +162,8 @@ type
     property ShowInfo:Boolean read FShowInfo write FShowInfo;
     property StopDrawing:Boolean read FStopDrawing write FStopDrawing;
     property AutoFetchTile:Boolean read FAutoFetchTile write SetAutoFetchTile;
+    property ForceFetchTile:Boolean read FForceFetchTile write SetForceFetchTile;
+    property CachePath:string read GetCachePath;
   protected
     function GetRightBottom:TDoublePoint;
     function GetCanvasTop:Double;
@@ -200,11 +211,16 @@ type
     procedure PaintStop;
     procedure PaintTile(ATile:TTile);
     procedure Paint; override;
+  private
+    FOnLayerChange:TNotifyEvent;
+    FOnTileMatrixSetChange:TNotifyEvent;
+  public
+    property OnLayerChange:TNotifyEvent read FOnLayerChange write FOnLayerChange;
+    property OnTileMatrixSetChange:TNotifyEvent read FOnTileMatrixSetChange write FOnTileMatrixSetChange;
   public
     procedure Clear; virtual;
     procedure Refresh;
     procedure ZoomToWorld; virtual;
-    //procedure LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
     procedure SaveToGeoTiff(FilenameWithoutExt:String);
     procedure ShowTiles(AScale:Double=0); //从服务器加载瓦片数据，根据给定比例尺确定层级，比例尺小于等于0时根据地图比例尺自动选择最合适的层级
   public
@@ -215,6 +231,18 @@ type
   end;
 
 implementation
+uses debugline;
+
+function fetch_tile_result_to_str(fetchresult:TFetchTileResult):string;
+begin
+  case fetchresult of
+    ftrError:     result:='Error';
+    ftrCache:     result:='Cache';
+    ftrWmtsFail:  result:='WmtsFail';
+    ftrSaved:     result:='Saved';
+    ftrConflict:  result:='Conflict';
+  end;
+end;
 
 procedure view_proportion_correction(vw,vh:integer;var ct,cl,cw,ch:double);
 var vp,cp:double;
@@ -462,8 +490,23 @@ begin
    end
 end;
 
+procedure TFetchTileThread.FetchInit;
+begin
+  {
+  with PTile do
+    Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%u Y:%u', [TileMatrix.Identifier, Col, Row]));
+  Form_Debug.AddMessage(FUrl);
+  }
+  FStartTime:=Now;
+end;
+
 procedure TFetchTileThread.FetchDone;
 begin
+  with PTile do
+    Form_Debug.AddMessage(
+      '['+DateTimeToStr(Now)+']  '+fetch_tile_result_to_str(FFetchResult)+'  '
+      +Format('T:%5.0fms L:%s X:%u Y:%u', [1000*86400*(Now-FStartTime),TileMatrix.Identifier, Col, Row])
+    );
   PTile.FEnabled:=true;
   if PTile.OnReady<>nil then PTile.OnReady(PTile);
 end;
@@ -471,12 +514,17 @@ end;
 procedure TFetchTileThread.Execute;
 var content:TMemoryStream;
 begin
+  FFetchResult:=ftrError;
+  Synchronize(@FetchInit);
   //如果缓存文件能找到就不访问瓦片服务器
-  if FileExists(PTile.CacheFileName) then begin
-    PTile.FPicture.LoadFromFile(PTile.CacheFileName);
-    Synchronize(@FetchDone);
-    exit;
-  end;
+  if not FForceFetch then
+    if FileExists(PTile.CacheFileName) then
+      begin
+        PTile.FPicture.LoadFromFile(PTile.CacheFileName);
+        FFetchResult:=ftrCache;
+        Synchronize(@FetchDone);
+        exit;
+      end;
   //找不到再开始走访问流程
   content:=TMemoryStream.Create;
   try try
@@ -484,16 +532,19 @@ begin
       AllowRedirect:=true;
       OnRedirect:=@CheckURI;
       AddHeader('User-Agent','ArcGIS Client Using WinInet');
+      FFetchResult:=ftrWmtsFail;
       Get(FUrl,content);
     except {silent 404} end;
     finally
       Free;
     end;
     if content.Size=0 then exit;
+    FFetchResult:=ftrConflict;
     content.Position:=0;
     PTile.FPicture.LoadFromStream(content);
     ForceDirectories(ExtractFileDir(PTile.CacheFileName));
     PTile.FPicture.SaveToFile(PTile.CacheFileName);
+    FFetchResult:=ftrSaved;
     Synchronize(@FetchDone);
   except {silent unable-to-open} end;
   finally
@@ -501,11 +552,12 @@ begin
   end;
 end;
 
-constructor TFetchTileThread.Create(aTile:TOnlineTile;aUrl:String);
+constructor TFetchTileThread.Create(aTile:TOnlineTile;aUrl:String;aForceFetch:Boolean);
 begin
   inherited Create(true);
   FUrl:=aUrl;
   PTile:=aTile;
+  FForceFetch:=aForceFetch;
   FreeOnTerminate:=true;
 end;
 
@@ -540,7 +592,7 @@ var thread:TFetchTileThread;
 begin
   result:=TOnlineTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
   result.FCachePath:=Self.FCachePath;
-  thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,aRow,aCol));
+  thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,aRow,aCol),TTileViewer(PTileViewer).FForceFetchTile);
   thread.Start;
 end;
 
@@ -568,7 +620,12 @@ begin
     result:=FetchTile(aLayer,aTileMatrix,aRow,aCol);
     FTileList.Add(result);
   end else begin
-    result:=TOnlineTile(FTileList[idx]);
+    if TTileViewer(PTileViewer).FForceFetchTile then begin
+      TOnlineTile(FTileList[idx]).Free;
+      result:=FetchTile(aLayer,aTileMatrix,aRow,aCol);
+      FTileList[idx]:=result;
+    end else
+      result:=TOnlineTile(FTileList[idx]);
   end;
 end;
 
@@ -605,14 +662,23 @@ begin
   if value then ShowTiles;
 end;
 
-procedure TTileViewer.SetCurrentService(value:TWMTS_Service);
+procedure TTileViewer.SetForceFetchTile(value:boolean);
 begin
-  FCurrentService:=value;
+  FForceFetchTile:=value;
+  if value then ShowTiles;
+end;
+
+function TTileViewer.GetCurrentService:TWMTS_Service;
+begin
+  result:=nil;
+  if FCurrentLayer=nil then exit;
+  result:=TWMTS_Layer(FCurrentLayer).Service as TWMTS_Service;
 end;
 
 procedure TTileViewer.SetCurrentLayer(value:TWMTS_Layer);
 begin
   FCurrentLayer:=value;
+  if FOnLayerChange<>nil then FOnLayerChange(Self);
   if FAutoFetchTile then begin
     FTilePool.Clear;
     ShowTiles;
@@ -623,6 +689,12 @@ procedure TTileViewer.SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
 begin
   FCurrentTileMatrixSet:=value;
   PBestTileMatrix:=value.BestFitTileMatrix(FScaleX);
+  if FOnTileMatrixSetChange<>nil then FOnTileMatrixSetChange(Self);
+end;
+
+function TTileViewer.GetCachePath:string;
+begin
+  result:=FTilePool.CachePath;
 end;
 
 function TTileViewer.GetRightBottom:TDoublePoint;
@@ -842,6 +914,7 @@ begin
     Canvas.Brush.Color:=clWhite;
     Canvas.Brush.Style:=bsSolid;
     prompt_cursor:=Format(' cx=%d  cy=%d',[FMouseCursor.X,FMouseCursor.Y]);
+    //prompt_cursor:=Format('  lyr=%s  tm=%s',[CurrentLayer.Title, CurrentTileMatrixSet.Identifier]);
     prompt_view:=Format(' scale_x=%f  scale_y=%f',[FScaleX,FScaleY]);
     if PBestTileMatrix<>nil then prompt_view:=Format(' level=%s %s',[PBestTileMatrix.Identifier,prompt_view]);
     wmct_cursor:=Format(' X=%f  Y=%f  lng=%3.6f  lat=%2.6f',[wmct_xy.x,wmct_xy.y,ltlg.x,ltlg.y]);
@@ -954,73 +1027,20 @@ begin
 end;
 
 procedure TTileViewer.ZoomToWorld;
-var l,t,r,b,w,h:double;
-    origin:TDoublePoint;
+var origin:TDoublePoint;
 begin
-  {
-  l:=-20037508.3427892;
-  r:=+20037508.3427892;
-  t:=+20037508.3427892;
-  b:=-20037508.3427892;
-  //GetCanvasRange(l,t,r,b);
-  w:=r-l;
-  h:=t-b;
-  view_proportion_correction(Width,Height,t,l,w,h);
-  CanvasTop:=t;
-  CanvasLeft:=l;
-  CanvasWidth:=w;
-  CanvasHeight:=h;
-  Paint;
-  }
   origin.x:=0;
   origin.y:=0;
   PanToPoint(origin);
   ZoomTo(2.6e8);
 end;
-{
-procedure TTileViewer.LoadFromWMTS(WmtsPath:String;Level:Byte;AFormat:TTileFormat);
-var files:TStringList;
-    rootpath,filename:string;
-    str_x,str_y:string;
-    rootpath_length:integer;
-    cell_x,cell_y:integer;
-    x1,x2,y1,y2:int64;
-    tmpTile:TTile;
-    wmxy_lt,wmxy_rb:TDoublePoint;
-begin
-  FTileLevel:=Level;
-  rootpath:=WmtsPath+'/'+IntToStr(Level);
-  rootpath_length:=length(rootpath);
-  try
-    files:=TStringList.Create;
-    FindAllFiles(files,rootpath,'*.png',true,faAnyFile);
-    for filename in files do begin
-      str_x:=filename;
-      System.Delete(str_x,1,rootpath_length+1);
-      str_y:=ExtractFileNameWithoutExt(ExtractFileName(str_x));
-      str_x:=ExtractFilePath(str_x);
-      System.delete(str_x,length(str_x),1);
-      cell_x:=StrToInt(str_x);
-      cell_y:=StrToInt(str_y);
-      tmpTile:=TTile.CreateFromFile(filename,AFormat);
-      x1:=cell_x*tmpTile.FPixelWidth;
-      y1:=cell_y*tmpTile.FPixelHeight;
-      x2:=x1+tmpTile.FPixelWidth;
-      y2:=y1+tmpTile.FPixelHeight;
-      wmxy_lt:=WebmercatorToXY(WebMercator(x1,y1,Level));
-      wmxy_rb:=WebmercatorToXY(WebMercator(x2,y2,Level));
-      tmpTile.SetTileRange(wmxy_lt.x,wmxy_lt.y,wmxy_rb.x,wmxy_rb.y);
-      FTileList.Add(tmpTile);
-    end;
-  finally
-    files.Free;
-  end;
-end;
-}
+
 procedure TTileViewer.SaveToGeoTiff(FilenameWithoutExt:String);
 var StopDrawingState:boolean;
     l,t,r,b:double;
     tmpTfwFile:TStringList;
+    //tmpTifFile:TFPCustomImage;
+    //tmpTiffWriter:TFPWriterTiff;
     tmpTile:TTile;
     lt,rb:TDoublePoint;
 begin
@@ -1030,6 +1050,8 @@ begin
   GetCanvasRange(l,t,r,b);
   tmpTile:=TTile.CreateFromTiles(FTilePool.FTileList);
   tmpTFWFile:=TStringList.Create;
+  //tmpTifFile:=TFPCustomImage.create(tmpTile.Width,tmpTile.Height);
+  //tmpTiffWriter:=TFPWriterTiff.Create;
   try
     tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
     //GeoTiff里的exif信息要专门去写
@@ -1051,6 +1073,8 @@ begin
   finally
     StopDrawing:=StopDrawingState;
     tmpTfwFile.Free;
+    //tmpTifFile.Free;
+    //tmpTiffWriter.Free;
     tmpTile.Free;
   end;
 end;
@@ -1086,8 +1110,8 @@ end;
 constructor TTileViewer.Create(AOwner:TComponent);
 begin
   inherited Create(AOwner);
-  //FTileList:=TList.Create;
   FTilePool:=TTileViewerPool.Create(Self);
+  FExportPool:=TTileViewerPool.Create(Self);
   FCurrentTileMatrixSet:=nil;
   FCurrentLayer:=nil;
   FCurrentTileMatrixSet:=nil;
@@ -1108,8 +1132,8 @@ end;
 destructor TTileViewer.Destroy;
 begin
   Clear;
-  //FTileList.Free;
   FTilePool.Free;
+  FExportPool.Free;
   inherited Destroy;
 end;
 

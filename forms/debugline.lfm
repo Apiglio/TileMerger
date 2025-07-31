@@ -6,7 +6,6 @@ object Form_Debug: TForm_Debug
   Caption = '调试信息'
   ClientHeight = 328
   ClientWidth = 480
-  DesignTimePPI = 144
   OnDeactivate = FormDeactivate
   Position = poMainFormCenter
   LCLVersion = '1.8.4.0'

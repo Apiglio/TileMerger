@@ -38,7 +38,7 @@ end;
 
 procedure TForm_Debug.FormDeactivate(Sender: TObject);
 begin
-  Hide;
+  //Hide;
 end;
 
 procedure TForm_Debug.AddMessage(msg:string);

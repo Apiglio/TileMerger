@@ -1,12 +1,11 @@
 object Form_ExportTiff: TForm_ExportTiff
-  Left = 1021
-  Height = 437
-  Top = 226
+  Left = 547
+  Height = 399
+  Top = 371
   Width = 642
   Caption = '拼合导出'
-  ClientHeight = 437
+  ClientHeight = 399
   ClientWidth = 642
-  DesignTimePPI = 144
   Position = poMainFormCenter
   LCLVersion = '1.8.4.0'
   object ListBox_TileMatrix: TListBox
@@ -16,10 +15,10 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    Left = 122
+    Left = 92
     Height = 152
-    Top = 112
-    Width = 504
+    Top = 98
+    Width = 534
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Top = 16
     BorderSpacing.Right = 16
@@ -34,7 +33,7 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideRight.Side = asrBottom
     Left = 16
     Height = 16
-    Top = 328
+    Top = 307
     Width = 610
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Left = 16
@@ -48,10 +47,10 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Control = Owner
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    Left = 122
-    Height = 32
+    Left = 92
+    Height = 25
     Top = 16
-    Width = 504
+    Width = 534
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Top = 16
     BorderSpacing.Right = 16
@@ -63,9 +62,9 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Control = Edit_Layer
     AnchorSideTop.Side = asrCenter
     Left = 16
-    Height = 24
+    Height = 17
     Top = 20
-    Width = 90
+    Width = 60
     BorderSpacing.Left = 16
     BorderSpacing.Right = 16
     Caption = '瓦片图层：'
@@ -78,10 +77,10 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    Left = 122
-    Height = 32
-    Top = 64
-    Width = 504
+    Left = 92
+    Height = 25
+    Top = 57
+    Width = 534
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Top = 16
     BorderSpacing.Right = 16
@@ -93,9 +92,9 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Control = Edit_TileMatrixSet
     AnchorSideTop.Side = asrCenter
     Left = 16
-    Height = 24
-    Top = 68
-    Width = 90
+    Height = 17
+    Top = 61
+    Width = 60
     BorderSpacing.Left = 16
     BorderSpacing.Right = 16
     Caption = '层级方案：'
@@ -107,10 +106,10 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Control = ListBox_TileMatrix
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = Button_SaveFileName
-    Left = 122
-    Height = 32
-    Top = 280
-    Width = 390
+    Left = 92
+    Height = 25
+    Top = 266
+    Width = 444
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Top = 16
     TabOrder = 4
@@ -120,9 +119,9 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Control = Edit_SaveFileName
     AnchorSideTop.Side = asrCenter
     Left = 16
-    Height = 24
-    Top = 284
-    Width = 90
+    Height = 17
+    Top = 270
+    Width = 60
     BorderSpacing.Left = 16
     BorderSpacing.Right = 16
     Caption = '导出文件：'
@@ -132,9 +131,9 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = ListBox_TileMatrix
     Left = 16
-    Height = 24
-    Top = 112
-    Width = 90
+    Height = 17
+    Top = 98
+    Width = 60
     BorderSpacing.Left = 16
     BorderSpacing.Right = 16
     Caption = '层级选择：'
@@ -145,10 +144,10 @@ object Form_ExportTiff: TForm_ExportTiff
     AnchorSideTop.Side = asrCenter
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
-    Left = 528
-    Height = 34
-    Top = 279
-    Width = 98
+    Left = 552
+    Height = 27
+    Top = 265
+    Width = 74
     Anchors = [akTop, akRight]
     AutoSize = True
     BorderSpacing.Left = 16
@@ -157,19 +156,38 @@ object Form_ExportTiff: TForm_ExportTiff
     OnClick = Button_SaveFileNameClick
     TabOrder = 5
   end
-  object Button_ExportTiff: TButton
+  object Button_DownloadTiles: TButton
     AnchorSideLeft.Control = Owner
     AnchorSideLeft.Side = asrCenter
     AnchorSideTop.Control = ProgressBar_Export
     AnchorSideTop.Side = asrBottom
-    Left = 185
-    Height = 48
-    Top = 360
-    Width = 272
+    AnchorSideRight.Control = Button_MergeTiles
+    Left = 354
+    Height = 36
+    Top = 339
+    Width = 128
+    Anchors = [akTop, akRight]
     BorderSpacing.Top = 16
-    Caption = '开始下载并自动拼合导出'
-    OnClick = Button_ExportTiffClick
+    BorderSpacing.Right = 16
+    Caption = '下载瓦片'
+    OnClick = Button_DownloadTilesClick
     TabOrder = 6
+  end
+  object Button_MergeTiles: TButton
+    AnchorSideTop.Control = ProgressBar_Export
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 498
+    Height = 36
+    Top = 339
+    Width = 128
+    Anchors = [akTop, akRight]
+    BorderSpacing.Top = 16
+    BorderSpacing.Right = 16
+    Caption = '合并导出'
+    OnClick = Button_MergeTilesClick
+    TabOrder = 7
   end
   object SaveDialog_Export: TSaveDialog
     Title = '拼接导出为 ...'

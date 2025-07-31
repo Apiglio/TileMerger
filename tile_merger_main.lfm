@@ -4,9 +4,8 @@ object FormTileMerger: TFormTileMerger
   Top = 344
   Width = 1255
   Caption = 'Tile Merger'
-  ClientHeight = 565
+  ClientHeight = 575
   ClientWidth = 1255
-  DesignTimePPI = 144
   Menu = MainMenu_TileMerger
   OnCreate = FormCreate
   Position = poScreenCenter
@@ -19,7 +18,7 @@ object FormTileMerger: TFormTileMerger
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = StatusBar_TileMerger
     Left = 328
-    Height = 531
+    Height = 553
     Top = 0
     Width = 927
     Anchors = [akTop, akLeft, akRight, akBottom]
@@ -29,10 +28,10 @@ object FormTileMerger: TFormTileMerger
   object Label_export: TLabel
     AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Side = asrCenter
-    Left = 734
-    Height = 24
-    Top = 87
-    Width = 95
+    Left = 749
+    Height = 17
+    Top = 93
+    Width = 64
     Anchors = []
     Caption = ' 导出路径：'
     ParentColor = False
@@ -43,25 +42,37 @@ object FormTileMerger: TFormTileMerger
     AnchorSideRight.Control = Splitter_MainV
     AnchorSideBottom.Control = StatusBar_TileMerger
     Left = 0
-    Height = 531
+    Height = 553
     Top = 0
     Width = 320
     Anchors = [akTop, akLeft, akRight, akBottom]
+    ReadOnly = True
     TabOrder = 1
     OnSelectionChanged = TreeView_wmts_listSelectionChanged
+    Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
   end
   object StatusBar_TileMerger: TStatusBar
     Left = 0
-    Height = 34
-    Top = 531
+    Height = 22
+    Top = 553
     Width = 1255
-    Panels = <>
+    Panels = <    
+      item
+        Width = 50
+      end    
+      item
+        Width = 50
+      end    
+      item
+        Width = 50
+      end>
+    SimplePanel = False
   end
   object Splitter_MainV: TSplitter
     AnchorSideTop.Control = Owner
     AnchorSideBottom.Control = StatusBar_TileMerger
     Left = 320
-    Height = 531
+    Height = 553
     Top = 0
     Width = 8
     Align = alNone
@@ -104,19 +115,31 @@ object FormTileMerger: TFormTileMerger
       Caption = '下载'
       object MenuItem_DownloadCachePath: TMenuItem
         Caption = '缓存目录'
+        OnClick = MenuItem_DownloadCachePathClick
       end
       object MenuItem_DownloadMode: TMenuItem
         Caption = '瓦片加载...'
-        Enabled = False
         object MenuItem_DownloadModeManual: TMenuItem
+          AutoCheck = True
           Caption = '手动加载'
+          GroupIndex = 1
+          RadioItem = True
+          OnClick = MenuItem_DownloadModeSwitchClick
         end
         object MenuItem_DownloadModeAuto: TMenuItem
+          AutoCheck = True
           Caption = '自动加载'
           Checked = True
+          GroupIndex = 1
+          RadioItem = True
+          OnClick = MenuItem_DownloadModeSwitchClick
         end
         object MenuItem_DownloadModeForce: TMenuItem
+          AutoCheck = True
           Caption = '强制加载'
+          GroupIndex = 1
+          RadioItem = True
+          OnClick = MenuItem_DownloadModeSwitchClick
         end
       end
       object MenuItem_DownloadDiv01: TMenuItem
@@ -142,6 +165,7 @@ object FormTileMerger: TFormTileMerger
       end
       object MenuItem_OptionAbout: TMenuItem
         Caption = '关于'
+        OnClick = MenuItem_OptionAboutClick
       end
     end
   end

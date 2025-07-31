@@ -13,7 +13,8 @@ type
   { TForm_ExportTiff }
 
   TForm_ExportTiff = class(TForm)
-    Button_ExportTiff: TButton;
+    Button_MergeTiles: TButton;
+    Button_DownloadTiles: TButton;
     Button_SaveFileName: TButton;
     Edit_Layer: TEdit;
     Edit_TileMatrixSet: TEdit;
@@ -25,7 +26,8 @@ type
     ListBox_TileMatrix: TListBox;
     ProgressBar_Export: TProgressBar;
     SaveDialog_Export: TSaveDialog;
-    procedure Button_ExportTiffClick(Sender: TObject);
+    procedure Button_DownloadTilesClick(Sender: TObject);
+    procedure Button_MergeTilesClick(Sender: TObject);
     procedure Button_SaveFileNameClick(Sender: TObject);
   private
     PTileViewer:TTileViewer;
@@ -40,13 +42,19 @@ implementation
 
 {$R *.lfm}
 
-procedure TForm_ExportTiff.Button_ExportTiffClick(Sender: TObject);
+procedure TForm_ExportTiff.Button_DownloadTilesClick(Sender: TObject);
 var tmpTM:TWMTS_TileMatrix;
 begin
   ForceDirectories(ExtractFileDir(Edit_SaveFileName.Text));
   tmpTM:=TWMTS_TileMatrix(ListBox_TileMatrix.Items.Objects[ListBox_TileMatrix.ItemIndex]);
-  PTileViewer.Clear;
+
+  PTileViewer.TilePool.Clear;
   PTileViewer.ShowTiles(tmpTM.Scale);
+
+end;
+
+procedure TForm_ExportTiff.Button_MergeTilesClick(Sender: TObject);
+begin
   PTileViewer.SaveToGeoTiff(Edit_SaveFileName.Text);
 end;
 
