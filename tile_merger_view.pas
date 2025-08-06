@@ -676,8 +676,14 @@ begin
 end;
 
 procedure TTileViewer.SetCurrentLayer(value:TWMTS_Layer);
+var OldServer:TWMTS_Service;
 begin
+  if FCurrentLayer<>nil then OldServer:=FCurrentLayer.Service as TWMTS_Service;
   FCurrentLayer:=value;
+  if FCurrentLayer.Service<>OldServer then begin
+    //修改Layer导致Server不同，则修改TileMatrixSet为新Server的第一个TileMatrixSet
+    FCurrentTileMatrixSet:=TWMTS_Service(FCurrentLayer.Service).TileMatrixSets[0];
+  end;
   if FOnLayerChange<>nil then FOnLayerChange(Self);
   if FAutoFetchTile then begin
     FTilePool.Clear;
@@ -686,8 +692,14 @@ begin
 end;
 
 procedure TTileViewer.SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
+var OldServer:TWMTS_Service;
 begin
+  if FCurrentTileMatrixSet<>nil then OldServer:=FCurrentTileMatrixSet.Service as TWMTS_Service;
   FCurrentTileMatrixSet:=value;
+  if FCurrentTileMatrixSet.Service<>OldServer then begin
+    //修改TileMatrixSet导致Server不同，则修改Layer为新Server的第一个Layer
+    FCurrentLayer:=TWMTS_Service(FCurrentTileMatrixSet.Service).Layers[0];
+  end;
   PBestTileMatrix:=value.BestFitTileMatrix(FScaleX);
   if FOnTileMatrixSetChange<>nil then FOnTileMatrixSetChange(Self);
 end;

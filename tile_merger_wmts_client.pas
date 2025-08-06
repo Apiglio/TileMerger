@@ -67,6 +67,7 @@ type
     property Identifier:String read FIdentifier;
     property TileMatrixs[index:integer]:TWMTS_TileMatrix read GetTileMatrix;
     property TileMatrixCount:Integer read GetTileMatrixCount;
+    property Service:TObject read FService;
   public
     function BestFitTileMatrix(AScale:Double):TWMTS_TileMatrix; //根据地图比例尺选择最合适的TileMatrix
   public
@@ -290,6 +291,7 @@ begin
         content_node:=node.ChildNodes[idx];
         case content_node.NodeName of
           'Layer':begin
+            //天地图格式差很多，要专门处理 http://s0.fjmap.net/img_fj_2019/wmts
             tmpLayer:=TWMTS_Layer.Create;
             tmpLayer.FTitle:=content_node.FindNode('ows:Title').FirstChild.NodeValue;
             tmpLayer.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
@@ -300,9 +302,13 @@ begin
           end;
           'TileMatrixSet':begin
             tmpTileMatrixSet:=TWMTS_TileMatrixSet.Create;
-            tmpTileMatrixSet.FTitle:=content_node.FindNode('ows:Title').FirstChild.NodeValue;
-            tmpTileMatrixSet.FAbstract:=content_node.FindNode('ows:Abstract').FirstChild.NodeValue;
             tmpTileMatrixSet.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
+            if content_node.FindNode('ows:Abstract') <> nil then
+              tmpTileMatrixSet.FAbstract:=content_node.FindNode('ows:Abstract').FirstChild.NodeValue;
+            if content_node.FindNode('ows:Title') <> nil then
+              tmpTileMatrixSet.FTitle:=content_node.FindNode('ows:Title').FirstChild.NodeValue
+            else
+              tmpTileMatrixSet.FTitle:=tmpTileMatrixSet.FIdentifier;
             tmpTileMatrixSet.FService:=Self;
             mt_len:=content_node.ChildNodes.Count;
             for mt_idx:=0 to mt_len-1 do begin
@@ -398,6 +404,19 @@ begin
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml(_wayback_);
   FServiceList.Add(tmpService);
+
+  //tmpService:=TWMTS_Service.Create;
+  //tmpService.LoadFromManifestXml('https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml');
+  //FServiceList.Add(tmpService);
+
+  //tmpService:=TWMTS_Service.Create;
+  //tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts');
+  //FServiceList.Add(tmpService);
+
+
+  //https://ows.terrestris.de/osm/service?service=WMTS&request=GetCapabilities
+  //https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml
+
 end;
 
 destructor TWMTS_Client.Destroy;
