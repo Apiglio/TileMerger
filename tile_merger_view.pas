@@ -143,6 +143,7 @@ type
   private
     FShowGrid:Boolean;
     FShowInfo:Boolean;
+    FShowScale:Boolean;
     FStopDrawing:Boolean;
     FAutoFetchTile:Boolean;
     FForceFetchTile:Boolean;
@@ -160,6 +161,7 @@ type
     property TilePool:TTileViewerPool read FTilePool;
     property ShowGrid:Boolean read FShowGrid write FShowGrid;
     property ShowInfo:Boolean read FShowInfo write FShowInfo;
+    property ShowScale:Boolean read FShowScale write FShowScale;
     property StopDrawing:Boolean read FStopDrawing write FStopDrawing;
     property AutoFetchTile:Boolean read FAutoFetchTile write SetAutoFetchTile;
     property ForceFetchTile:Boolean read FForceFetchTile write SetForceFetchTile;
@@ -207,6 +209,7 @@ type
     procedure Zoom(AOrigin:TDoublePoint;AScale:Double);
     procedure ZoomTo(AScale:Double);
     procedure ProportionCorrection;
+    procedure PaintScale;
     procedure PaintInfo;
     procedure PaintStop;
     procedure PaintTile(ATile:TTile);
@@ -897,6 +900,117 @@ begin
   CanvasHeight:=hh;
 end;
 
+function BestScaleDistance(max_scale:double):double;
+var level:integer;
+    base,base2,base5:double;
+begin
+  // result <= max_scale and result =  M*10^N ( M in {1,2,5}, N in interger )
+  level := trunc(ln(max_scale)/ln(10));
+  base  := exp(level*ln(10));
+  base2 := base*2;
+  base5 := base*5;
+  if max_scale>=base5 then result:=base5
+  else if max_scale>=base2 then result:=base2
+  else result:=base;
+end;
+
+function BestMeterUnit(len:double):string;
+begin
+  if len >= 1000 then result:=Format('%.0fkm',[len/1000])
+  else result:=Format('%.0fm',[len]);
+end;
+
+procedure TTileViewer.PaintScale;
+const _scale_offset_ = 8;
+var sp1,sp2,sp_tmp:TPoint;
+    wm1,wm2,wm_tmp:TDoublePoint;
+    scale_factor:double;
+    cw,ch,rw,rh:double;
+    tw,th:integer;
+    scale_text:string;
+begin
+  if not FShowScale then exit;
+  if Height < _scale_offset_*5 then exit;
+  if Width  < _scale_offset_*5 then exit;
+  sp1.x := _scale_offset_;
+  sp1.y := _scale_offset_;
+  sp2.x := Width  - _scale_offset_;
+  sp2.y := Height - _scale_offset_;
+  if FShowInfo then begin
+    sp1.y := sp1.y + Canvas.TextHeight('H');
+    sp2.y := sp2.y - Canvas.TextHeight('H');
+  end;
+  wm1   := CursorPoint(sp1.x, sp1.y);
+  wm2   := CursorPoint(sp2.x, sp2.y);
+  cw    := wm2.x - wm1.x;
+  ch    := wm1.y - wm2.y;
+  if (wm1.y>=webmercator_min_y) and (wm1.y<=webmercator_max_y) then begin
+    //drawing left-top scale
+    scale_factor:=WebmercatorToScaleFactor(wm1);
+    rw:=BestScaleDistance(cw/scale_factor/6);
+    rh:=BestScaleDistance(ch/scale_factor/5);
+    wm_tmp:=wm1;
+    wm_tmp.x:=wm_tmp.x+rw*scale_factor;
+    Canvas.Pen.Color := clWhite;
+    Canvas.Pen.Width := 3;
+    Canvas.Pen.Style := psSolid;
+    sp_tmp:=LocatePoint(wm_tmp.x, wm_tmp.y);
+    Canvas.Line(sp1, sp_tmp);
+    Canvas.Line(sp1, sp1+Classes.Point(0,+3));
+    Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,+3));
+    Canvas.Pen.Color := clBlack;
+    Canvas.Pen.Width := 1;
+    Canvas.Line(sp1, LocatePoint(wm_tmp.x, wm_tmp.y));
+    Canvas.Line(sp1, sp1+Classes.Point(0,+3));
+    Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,+3));
+
+    Canvas.Brush.Style := bsClear;
+    Canvas.Font.Color  := clWhite;
+    //outline, dirty but work
+    scale_text:=BestMeterUnit(rw);
+    th:=Canvas.TextHeight('10m') div 2;
+    Canvas.TextOut(sp1.X - 1, sp1.y + th - 1, scale_text);
+    Canvas.TextOut(sp1.X - 1, sp1.y + th + 1, scale_text);
+    Canvas.TextOut(sp1.X + 1, sp1.y + th - 1, scale_text);
+    Canvas.TextOut(sp1.X + 1, sp1.y + th + 1, scale_text);
+    Canvas.Font.Color  := clBlack;
+    Canvas.TextOut(sp1.X,     sp1.y + th,     scale_text);
+  end;
+  if (wm2.y>=webmercator_min_y) and (wm2.y<=webmercator_max_y) then begin
+    //drawing right-bottom scale
+    scale_factor:=WebmercatorToScaleFactor(wm2);
+    rw:=BestScaleDistance(cw/scale_factor/6);
+    rh:=BestScaleDistance(ch/scale_factor/5);
+    wm_tmp:=wm2;
+    wm_tmp.x:=wm_tmp.x-rw*scale_factor;
+    Canvas.Pen.Color := clWhite;
+    Canvas.Pen.Width := 3;
+    Canvas.Pen.Style := psSolid;
+    sp_tmp:=LocatePoint(wm_tmp.x, wm_tmp.y);
+    Canvas.Line(sp2, sp_tmp);
+    Canvas.Line(sp2, sp2+Classes.Point(0,-3));
+    Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,-3));
+    Canvas.Pen.Color := clBlack;
+    Canvas.Pen.Width := 1;
+    Canvas.Line(sp2, LocatePoint(wm_tmp.x, wm_tmp.y));
+    Canvas.Line(sp2, sp2+Classes.Point(0,-3));
+    Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,-3));
+
+    Canvas.Brush.Style := bsClear;
+    Canvas.Font.Color  := clWhite;
+    //outline, dirty but work
+    scale_text:=BestMeterUnit(rw);
+    th:=3*Canvas.TextHeight('10m') div 2;
+    tw:=Canvas.TextWidth(scale_text);
+    Canvas.TextOut(sp2.X - tw - 1, sp2.y - th - 1, scale_text);
+    Canvas.TextOut(sp2.X - tw - 1, sp2.y - th + 1, scale_text);
+    Canvas.TextOut(sp2.X - tw + 1, sp2.y - th - 1, scale_text);
+    Canvas.TextOut(sp2.X - tw + 1, sp2.y - th + 1, scale_text);
+    Canvas.Font.Color  := clBlack;
+    Canvas.TextOut(sp2.X - tw,     sp2.y - th,     scale_text);
+  end;
+end;
+
 procedure TTileViewer.PaintInfo;
 var wmct:TWebMercator;
     wmct_xy,wmct_lt,wmct_rb:TDoublePoint;
@@ -1011,6 +1125,7 @@ begin
     inc(index);
   end;
   PaintInfo;
+  PaintScale;
 end;
 
 procedure TTileViewer.Clear;
@@ -1105,6 +1220,7 @@ begin
   tmpTile:=Sender as TOnlineTile;
   if tmpTile.TileMatrix<>PBestTileMatrix then exit;
   PaintTile(tmpTile);
+  PaintScale;
 end;
 
 constructor TTileViewer.Create(AOwner:TComponent);
@@ -1118,6 +1234,7 @@ begin
   FMovementEnabled:=false;
   FShowGrid:=false;
   FShowInfo:=false;
+  FShowScale:=true;//暂时强制显示
   FStopDrawing:=false;
   AutoFetchTile:=false;
   //很随意的一个起始范围

@@ -8,8 +8,11 @@ uses
   Classes, SysUtils, math;
 
 const cell_pixel_width = 256;
+      webmercator_max_y = +20037508.3427892;
+      webmercator_min_y = -20037508.3427892;
       webmercator_ec = 2*20037508.3427892;  //equator circumference
       webmercator_ms = 5.590822640285016E8; //WMTS L0 ScaleDenominator
+      webmercator_rd = 6378137.0;           //radius of the earth
 
 type
   TDoublePoint = record
@@ -31,6 +34,8 @@ function LatlongToWebmercatorXY(latlong:TLatLong):TDoublePoint;
 function WebmercatorToXY(wmct:TWebMercator):TDoublePoint;
 function WebmercatorToLatlong(wmct:TWebMercator):TLatLong;
 function WebmercatorXYToLatlong(wmct_xy:TDoublePoint):TLatLong;
+function LatLongToScaleFactor(latlong:TLatLong):Double;
+function WebmercatorToScaleFactor(wmct_xy:TDoublePoint):Double;
 operator +(ina,inb:TDoublePoint):TDoublePoint;
 operator -(ina,inb:TDoublePoint):TDoublePoint;
 operator +(ina,inb:TInt64Point):TInt64Point;
@@ -117,6 +122,18 @@ begin
   ry:=0.5-wmct_xy.y/(-webmercator_ec);
   result.x:=360*rx-180;
   result.y:=180*arctan(sinh(2*pi*ry-pi))/pi;
+end;
+
+function LatLongToScaleFactor(latlong:TLatLong):Double;
+var wmct_xy:TDoublePoint;
+begin
+  wmct_xy:=LatlongToWebmercatorXY(latlong);
+  result:=cosh(wmct_xy.y / webmercator_rd);
+end;
+
+function WebmercatorToScaleFactor(wmct_xy:TDoublePoint):Double;
+begin
+  result:=cosh(wmct_xy.y / webmercator_rd);
 end;
 
 operator +(ina,inb:TDoublePoint):TDoublePoint;
