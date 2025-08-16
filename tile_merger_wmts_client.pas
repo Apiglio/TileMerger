@@ -405,15 +405,17 @@ begin
   tmpService.LoadFromManifestXml(_wayback_);
   FServiceList.Add(tmpService);
 
-  //tmpService:=TWMTS_Service.Create;
-  //tmpService.LoadFromManifestXml('https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml');
-  //FServiceList.Add(tmpService);
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml');
+  FServiceList.Add(tmpService);
 
   //tmpService:=TWMTS_Service.Create;
   //tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts');
   //FServiceList.Add(tmpService);
 
 
+  //http://s0.fjmap.net:80/img_fj_2019/wmts
+  //https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml
   //https://ows.terrestris.de/osm/service?service=WMTS&request=GetCapabilities
   //https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml
 
