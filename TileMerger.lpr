@@ -8,7 +8,7 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, lazcontrols, tile_merger_main, tile_merger_wmts_client, debugline,
-  exporttiff
+  exporttiff, tile_merger_tiff
   { you can add units after this };
 
 {$R *.res}

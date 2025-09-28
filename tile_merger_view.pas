@@ -10,7 +10,7 @@ uses
   {$endif}
   Classes, SysUtils, Controls, Graphics, FileUtil, FPimage, FPWriteTIFF,
   fphttpclient, openssl, URIParser,
-  tile_merger_core, tile_merger_wmts_client;
+  tile_merger_core, tile_merger_wmts_client, tile_merger_tiff;
 
 const ogc_ppi = 90.71446714322;
       ogc_mm_per_pixel = 0.00028;
@@ -1047,6 +1047,119 @@ begin
   ZoomTo(2.6e8);
 end;
 
+procedure AddProjectionInformationToGeoTIFF(FilenameWithoutExt:String);
+var FileBytes:TMemoryStream;
+    TempIFDList:TMemoryStream;
+    tmpPosition,IFD_Count:DWORD;
+    OldFileSize,NewIfdEnd:DWord;
+    pModelPixelScale,pModelTiepoint,pGeoDouble,pGeoASCII:DWord;
+    pHeadDict,pTailDouble:DWord;
+begin
+  FileBytes:=TMemoryStream.Create;
+  TempIFDList:=TMemoryStream.Create;
+  try
+    FileBytes.LoadFromFile(FilenameWithoutExt+'.tif');
+    //按照libTIFF默认小端，并且默认只有一个IFD，且IFD头在$00000008
+    //FileBytes.Position:=4;
+    //tmpPosition:=FileBytes.ReadDWord;
+    //FileBytes.Position:=tmpPosition;
+    FileBytes.Position:=8;//只有一个IFD
+    IFD_Count:=FileBytes.ReadWord;
+    TempIFDList.SetSize(IFD_Count*12);
+    TempIFDList.Position:=0;
+    TempIFDList.CopyFrom(FileBytes,IFD_Count*12);
+
+    //旧的IFD区域180 bytes正好分成44+132两个区域存编辑信息和新增的GeoDictKey
+    FileBytes.Seek(8,soFromBeginning);
+    FileBytes.WriteBuffer('This File was modified By Apiglio TileMerger',44);
+    pHeadDict:=FileBytes.Position;
+
+    OldFileSize:=FileBytes.Size;
+    if OldFileSize mod 8 <>0 then OldFileSize:=OldFileSize - OldFileSize mod 8;
+    FileBytes.Position:=4;
+    FileBytes.WriteDWord(OldFileSize);
+    FileBytes.Position:=OldFileSize;
+    FileBytes.WriteWord(IFD_Count+1);
+    TempIFDList.Position:=0;
+    FileBytes.CopyFrom(TempIFDList,IFD_Count*12);
+
+    FileBytes.WriteWord(TIFF_Tag_PlanarConfiguration);
+    FileBytes.WriteWord(TIFF_TYPE_SHORT);
+    FileBytes.WriteDWord(1);
+    FileBytes.WriteDWord(1);
+
+    FileBytes.WriteWord(TIFF_Tag_ModelPixelScaleTag);
+    FileBytes.WriteWord(TIFF_TYPE_DOUBLE);
+    FileBytes.WriteDWord(3);
+    pModelPixelScale:=FileBytes.Position;
+    FileBytes.Seek(4,soFromCurrent);
+
+    FileBytes.WriteWord(TIFF_Tag_ModelTiepointTag);
+    FileBytes.WriteWord(TIFF_TYPE_DOUBLE);
+    FileBytes.WriteDWord(6);
+    pModelTiepoint:=FileBytes.Position;
+    FileBytes.Seek(4,soFromCurrent);
+
+    FileBytes.WriteWord(TIFF_Tag_GeoKeyDirectoryTag);
+    FileBytes.WriteWord(TIFF_TYPE_SHORT);
+    FileBytes.WriteDWord($44);
+    FileBytes.WriteDWord(pHeadDict);
+
+    FileBytes.WriteWord(TIFF_Tag_GeoDoubleParamsTag);
+    FileBytes.WriteWord(TIFF_TYPE_DOUBLE);
+    FileBytes.WriteDWord(4);
+    pGeoDouble:=FileBytes.Position;
+    FileBytes.Seek(4,soFromCurrent);
+
+    FileBytes.WriteWord(TIFF_Tag_GeoAsciiParamsTag);
+    FileBytes.WriteWord(TIFF_TYPE_ASCII);
+    FileBytes.WriteDWord(length(EPSG_3857)+1);
+    pGeoASCII:=FileBytes.Position;
+    FileBytes.Seek(4,soFromCurrent);
+
+    FileBytes.WriteDWord(0);//IFD结尾
+    NewIfdEnd:=FileBytes.Size;
+    if NewIfdEnd mod 8 <>0 then NewIfdEnd:=NewIfdEnd - NewIfdEnd mod 8;
+
+    //TailAcsii
+    FileBytes.Seek(NewIfdEnd,soFromBeginning);
+    FileBytes.WriteBuffer(EPSG_3857,length(EPSG_3857));
+    FileBytes.WriteByte(0);
+
+    //TailDouble
+    pTailDouble:=FileBytes.Position;
+    //FileByte.; //暂时不知道要写什么了，先注释掉
+
+    //HeadKeydict
+    FileBytes.Seek(pHeadDict,soFromBeginning);
+    FileBytes.WriteWord(1); //GeoTIFF Ver
+    FileBytes.WriteWord(1); //GeoTIFF Vis
+    FileBytes.WriteWord(0); //GeoTIFF MinVis
+    FileBytes.WriteWord(16);//Number of Tags
+
+    FileBytes.WriteWord(GT_Conf_GTModelTypeGeoKey);
+    FileBytes.WriteWord(0);FileBytes.WriteWord(1);FileBytes.WriteWord(1);
+    FileBytes.WriteWord(GT_Conf_GTRasterTypeGeoKey);
+    FileBytes.WriteWord(0);FileBytes.WriteWord(1);FileBytes.WriteWord(1);
+
+    FileBytes.WriteWord(GT_Conf_GTRasterTypeGeoKey);
+    FileBytes.WriteWord(0);FileBytes.WriteWord(1);FileBytes.WriteWord(1);
+
+
+    FileBytes.WriteDWord(FileBytes.Position+4);
+    FileBytes.WriteBuffer(EPSG_3857, length(EPSG_3857));
+    FileBytes.Writebyte(0);
+
+
+
+    FileBytes.SaveToFile(FilenameWithoutExt+'_prj.tif');
+
+  finally
+    FileBytes.Free;
+    TempIFDList.Free;
+  end;
+end;
+
 procedure TTileViewer.SaveToGeoTiff(FilenameWithoutExt:String);
 var StopDrawingState:boolean;
     l,t,r,b:double;
@@ -1066,6 +1179,7 @@ begin
   //tmpTiffWriter:=TFPWriterTiff.Create;
   try
     tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
+    AddProjectionInformationToGeoTIFF(FilenameWithoutExt);
     //GeoTiff里的exif信息要专门去写
     lt:=tmpTile.LeftTop;
     rb:=tmpTile.RightBottom;
