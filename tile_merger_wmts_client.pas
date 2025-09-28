@@ -76,6 +76,14 @@ type
     destructor Destroy; override;
   end;
 
+  TWMTS_Service_Config = record
+    url_replacement:record
+      old_pattern:string;
+      new_pattern:string;
+    end;
+    token:string;
+  end;
+
   TWMTS_Service = class
   private
     FTitle:String;
@@ -93,7 +101,7 @@ type
     property TileMatrixSetCount:Integer read GetTileMatrixSetCount;
     property Title:String read FTitle;
   public
-    procedure LoadFromManifestXml(aUrl:string);
+    procedure LoadFromManifestXml(aUrl:string; ServiceConfig:TWMTS_Service_Config);
   public
     procedure Clear;
     constructor Create;
@@ -114,6 +122,9 @@ type
     constructor Create;
     destructor Destroy; override;
   end;
+
+var
+  ServiceConfig_Default:TWMTS_Service_Config;
 
 implementation
 uses tile_merger_view;
@@ -254,7 +265,7 @@ begin
   result:=FTileMatrixSetList.Count;
 end;
 
-procedure TWMTS_Service.LoadFromManifestXml(aUrl:string);
+procedure TWMTS_Service.LoadFromManifestXml(aUrl:string; ServiceConfig:TWMTS_Service_Config);
 var manifest:TMemoryStream;
     xml:TXMLDocument;
     node,content_node,tilematrix_node:TDOMNode;
@@ -292,11 +303,14 @@ begin
         case content_node.NodeName of
           'Layer':begin
             //天地图格式差很多，要专门处理 http://s0.fjmap.net/img_fj_2019/wmts
+            //RESTful 和 KVP
             tmpLayer:=TWMTS_Layer.Create;
             tmpLayer.FTitle:=content_node.FindNode('ows:Title').FirstChild.NodeValue;
             tmpLayer.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
             tmpLayer.FFormat:=content_node.FindNode('Format').FirstChild.NodeValue;
             tmpLayer.FURLTemplate:=content_node.FindNode('ResourceURL').Attributes.GetNamedItem('template').NodeValue;
+            with ServiceConfig.url_replacement do
+              tmpLayer.FURLTemplate:=tmpLayer.FURLTemplate.Replace(old_pattern, new_pattern);
             tmpLayer.FService:=Self;
             FLayerList.Add(tmpLayer);
           end;
@@ -396,24 +410,30 @@ begin
 end;
 
 constructor TWMTS_Client.Create;
-const _wayback_ = 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/1.0.0/WMTSCapabilities.xml';
+//const _wayback_ = 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/1.0.0/WMTSCapabilities.xml';
+const _wayback_ = 'https://wayback-a.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/WMTSCapabilities.xml';
 var tmpService:TWMTS_Service;
+    tmpServiceConfig:TWMTS_Service_Config;
 begin
   inherited Create;
   FServiceList:=TList.Create;
+
+  tmpServiceConfig.url_replacement.old_pattern:='//wayback.';
+  tmpServiceConfig.url_replacement.new_pattern:='//wayback-a.';
+  tmpServiceConfig.token:='';
   tmpService:=TWMTS_Service.Create;
-  tmpService.LoadFromManifestXml(_wayback_);
+  tmpService.LoadFromManifestXml(_wayback_, tmpServiceConfig);
   FServiceList.Add(tmpService);
 
   //tmpService:=TWMTS_Service.Create;
-  //tmpService.LoadFromManifestXml('https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml');
+  //tmpService.LoadFromManifestXml('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml', ServiceConfig_Default);
   //FServiceList.Add(tmpService);
 
   //tmpService:=TWMTS_Service.Create;
   //tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts');
   //FServiceList.Add(tmpService);
 
-
+  //https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml
   //https://ows.terrestris.de/osm/service?service=WMTS&request=GetCapabilities
   //https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml
 
@@ -429,6 +449,12 @@ end;
 
 initialization
   InitSSLInterface;
+  with ServiceConfig_Default do begin
+    token:='';
+    url_replacement.old_pattern:='';
+    url_replacement.new_pattern:='';
+  end;
+
 
 end.
 
