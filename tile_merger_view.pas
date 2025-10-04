@@ -10,11 +10,11 @@ uses
   {$endif}
   Classes, SysUtils, Controls, Graphics, FileUtil, FPimage, FPWriteTIFF,
   fphttpclient, openssl, URIParser,
-  tile_merger_core, tile_merger_wmts_client, tile_merger_tiff;
-
+  tile_merger_core, tile_merger_projection, tile_merger_wmts_client, tile_merger_tiff;
+{
 const ogc_ppi = 90.71446714322;
       ogc_mm_per_pixel = 0.00028;
-
+}
 type
 
   ETileRangeError = class(Exception)
@@ -57,6 +57,10 @@ type
     property Height:Int64 read FPixelHeight;
     property Canvas:TCanvas read GetCanvas;
   public
+    Layer:TWMTS_Layer;
+    TileMatrix:TWMTS_TileMatrix;
+    Row,Col:Integer;
+  public
     function GetCanvasPoint(wmct_xy:TDoublePoint):TPoint;
     function GetMercatorXY(canvas_point:TPoint):TDoublePoint;
   public
@@ -80,10 +84,6 @@ type
   protected
     function GetCacheFileName:string;
   public
-    Layer:TWMTS_Layer;
-    TileMatrix:TWMTS_TileMatrix;
-    Row,Col:Integer;
-  public
     constructor CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer); reintroduce;
     property CacheFileName:string read GetCacheFileName;
   end;
@@ -104,9 +104,9 @@ type
     destructor Destroy; override;
   end;
 
-  TFetchTileResult = (ftrError, ftrCache, ftrWmtsFail, ftrSaved, ftrConflict);
+  TFetchTileResult = (ftrError, ftrCache, ftrWmtsFail, ftrFmtError, ftrSaved, ftrConflict);
   //获取瓦片的结果：Error在任务开始前出错，Cache从缓存中加载，WmtsFail下载失败，
-  //                Saved下载成功并缓存，Conflict下载成功但缓存失败
+  //                FmtError瓦片格式解析错误，Saved下载成功并缓存，Conflict下载成功但缓存失败
 
   TFetchTileThread = class(TThread)
   private
@@ -239,6 +239,7 @@ begin
     ftrError:     result:='Error';
     ftrCache:     result:='Cache';
     ftrWmtsFail:  result:='WmtsFail';
+    ftrFmtError:  result:='FmtError';
     ftrSaved:     result:='Saved';
     ftrConflict:  result:='Conflict';
   end;
@@ -272,8 +273,8 @@ end;
 
 function TTile.GetRightBottom:TDoublePoint;
 begin
-  result.x:=FLeftTop.x+FScaleX*Width*ogc_mm_per_pixel;
-  result.y:=FLeftTop.y-FScaleY*Height*ogc_mm_per_pixel;
+  result.x:=FLeftTop.x+FScaleX*Width*TileMatrix.MeterPerPixel;
+  result.y:=FLeftTop.y-FScaleY*Height*TileMatrix.MeterPerPixel;
 end;
 
 function TTile.GetTileTop:Double;
@@ -288,22 +289,22 @@ end;
 
 function TTile.GetTileRight:Double;
 begin
-  result:=FLeftTop.x+FScaleX*ogc_mm_per_pixel*FPixelWidth;
+  result:=FLeftTop.x+FScaleX*TileMatrix.MeterPerPixel*FPixelWidth;
 end;
 
 function TTile.GetTileBottom:Double;
 begin
-  result:=FLeftTop.y-FScaleY*ogc_mm_per_pixel*FPixelHeight;
+  result:=FLeftTop.y-FScaleY*TileMatrix.MeterPerPixel*FPixelHeight;
 end;
 
 function TTile.GetTileWidth:Double;
 begin
-  result:=FScaleX*ogc_mm_per_pixel*FPixelWidth;
+  result:=FScaleX*TileMatrix.MeterPerPixel*FPixelWidth;
 end;
 
 function TTile.GetTileHeight:Double;
 begin
-  result:=FScaleY*ogc_mm_per_pixel*FPixelHeight;
+  result:=FScaleY*TileMatrix.MeterPerPixel*FPixelHeight;
 end;
 
 function TTile.GetCanvas:TCanvas;
@@ -319,20 +320,20 @@ procedure TTile.SetTileRange(ALeft,ATop,ARight,ABottom:Double);
 begin
   FLeftTop.x:=ALeft;
   FLeftTop.y:=ATop;
-  FScaleX:=(ARight-ALeft)/ogc_mm_per_pixel/FPixelWidth;
-  FScaleY:=(ATop-ABottom)/ogc_mm_per_pixel/FPixelHeight;
+  FScaleX:=(ARight-ALeft)/TileMatrix.MeterPerPixel/FPixelWidth;
+  FScaleY:=(ATop-ABottom)/TileMatrix.MeterPerPixel/FPixelHeight;
 end;
 
 function TTile.GetCanvasPoint(wmct_xy:TDoublePoint):TPoint;
 begin
-  result.x:=+round((wmct_xy.x-FLeftTop.x)/FScaleX/ogc_mm_per_pixel);
-  result.y:=-round((wmct_xy.y-FLeftTop.y)/FScaleY/ogc_mm_per_pixel);
+  result.x:=+round((wmct_xy.x-FLeftTop.x)/FScaleX/TileMatrix.MeterPerPixel);
+  result.y:=-round((wmct_xy.y-FLeftTop.y)/FScaleY/TileMatrix.MeterPerPixel);
 end;
 
 function TTile.GetMercatorXY(canvas_point:TPoint):TDoublePoint;
 begin
-  result.x:=FLeftTop.x+FScaleX*canvas_point.x*ogc_mm_per_pixel;
-  result.y:=FLeftTop.y-FScaleY*canvas_point.y*ogc_mm_per_pixel;
+  result.x:=FLeftTop.x+FScaleX*canvas_point.x*TileMatrix.MeterPerPixel;
+  result.y:=FLeftTop.y-FScaleY*canvas_point.y*TileMatrix.MeterPerPixel;
 end;
 
 constructor TTile.CreateFromFile(const AFileName:String;AFormat:TTileFormat);
@@ -363,13 +364,14 @@ begin
   FEnabled:=false;//加载线程结束后修改为true
   FPixelWidth:=ATileMatrix.Width;
   FPixelHeight:=ATileMatrix.Height;
-  FLeftTop.x:=ATileMatrix.LeftTop.x+ACol*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Width);
-  FLeftTop.y:=ATileMatrix.LeftTop.y-ARow*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Height);
+  //FLeftTop.x:=ATileMatrix.LeftTop.x+ACol*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Width);
+  //FLeftTop.y:=ATileMatrix.LeftTop.y-ARow*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Height);
+  FLeftTop:=ATileMatrix.GetTileRect(ACol,ARow).LeftTop;
   FScaleX:=ATileMatrix.Scale;
   FScaleY:=ATileMatrix.Scale;
   FPicture:=TPicture.Create;
   case lowercase(ALayer.Format) of
-    'image/png':begin
+    'image/png','tiles':begin
       FPicture.PNG.SetSize(FPixelWidth,FPixelHeight);
       FImageFormat:=tfPNG;
     end;
@@ -397,6 +399,7 @@ begin
   FPixelWidth:=tmpTile.FPixelWidth;
   FPixelHeight:=tmpTile.FPixelHeight;
   TTile.GetWorldRange(tiles,l,t,r,b);
+  TileMatrix:=tmpTile.TileMatrix;
   SetTileRange(l,t,r,b);
   FImageFormat:=tmpTile.FImageFormat;
   //还原像素长度比例同时相应增加像素数量
@@ -492,11 +495,11 @@ end;
 
 procedure TFetchTileThread.FetchInit;
 begin
-  {
+  //{
   with PTile do
     Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%u Y:%u', [TileMatrix.Identifier, Col, Row]));
   Form_Debug.AddMessage(FUrl);
-  }
+  //}
   FStartTime:=Now;
 end;
 
@@ -507,8 +510,10 @@ begin
       '['+DateTimeToStr(Now)+']  '+fetch_tile_result_to_str(FFetchResult)+'  '
       +Format('T:%5.0fms L:%s X:%u Y:%u', [1000*86400*(Now-FStartTime),TileMatrix.Identifier, Col, Row])
     );
-  PTile.FEnabled:=true;
-  if PTile.OnReady<>nil then PTile.OnReady(PTile);
+  if FFetchResult in [ftrCache, ftrSaved] then begin
+    PTile.FEnabled:=true;
+    if PTile.OnReady<>nil then PTile.OnReady(PTile);
+  end;
 end;
 
 procedure TFetchTileThread.Execute;
@@ -531,17 +536,31 @@ begin
     with TFPHTTPClient.Create(nil) do try try
       AllowRedirect:=true;
       OnRedirect:=@CheckURI;
-      AddHeader('User-Agent','ArcGIS Client Using WinInet');
+      AddHeader('User-Agent',PTile.TileMatrix.UserAgent);
       FFetchResult:=ftrWmtsFail;
       Get(FUrl,content);
+      if ResponseStatusCode<>200 then begin
+        Synchronize(@FetchDone);
+        exit;
+      end;
     except {silent 404} end;
     finally
       Free;
     end;
-    if content.Size=0 then exit;
-    FFetchResult:=ftrConflict;
+    if content.Size=0 then begin
+      Synchronize(@FetchDone);
+      exit;
+    end;
+    FFetchResult:=ftrFmtError;
+    //返回xml格式而不是图片（这里并没有考虑返回svg的情况）
+    content.Position:=0;
+    if content.ReadByte=ord('<') then begin
+      Synchronize(@FetchDone);
+      exit;
+    end;
     content.Position:=0;
     PTile.FPicture.LoadFromStream(content);
+    FFetchResult:=ftrConflict;
     ForceDirectories(ExtractFileDir(PTile.CacheFileName));
     PTile.FPicture.SaveToFile(PTile.CacheFileName);
     FFetchResult:=ftrSaved;
@@ -711,8 +730,8 @@ end;
 
 function TTileViewer.GetRightBottom:TDoublePoint;
 begin
-  result.x:=FLeftTop.x+FScaleX*Width*ogc_mm_per_pixel;
-  result.y:=FLeftTop.y-FScaleY*Height*ogc_mm_per_pixel;
+  result.x:=FLeftTop.x+FScaleX*Width*CurrentTileMatrixSet.MeterPerPixel;
+  result.y:=FLeftTop.y-FScaleY*Height*CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 function TTileViewer.GetCanvasTop:Double;
@@ -727,22 +746,22 @@ end;
 
 function TTileViewer.GetCanvasRight:Double;
 begin
-  result:=FLeftTop.x+Width*FScaleX*ogc_mm_per_pixel;
+  result:=FLeftTop.x+Width*FScaleX*CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 function TTileViewer.GetCanvasBottom:Double;
 begin
-  result:=FLeftTop.y-Height*FScaleY*ogc_mm_per_pixel;
+  result:=FLeftTop.y-Height*FScaleY*CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 function TTileViewer.GetCanvasWidth:Double;
 begin
-  result:=Width*FScaleX*ogc_mm_per_pixel;
+  result:=Width*FScaleX*CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 function TTileViewer.GetCanvasHeight:Double;
 begin
-  result:=Height*FScaleY*ogc_mm_per_pixel;
+  result:=Height*FScaleY*CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 procedure TTileViewer.SetCanvasTop(value:Double);
@@ -758,23 +777,23 @@ end;
 procedure TTileViewer.SetCanvasRight(value:Double);
 begin
   if value<=FLeftTop.x then raise ETileRangeError.Create(value);
-  FScaleX:=(value-FLeftTop.x)/Width/ogc_mm_per_pixel;
+  FScaleX:=(value-FLeftTop.x)/Width/CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 procedure TTileViewer.SetCanvasBottom(value:Double);
 begin
   if value>=FLeftTop.y then raise ETileRangeError.Create(value);
-  FScaleY:=(FLeftTop.y-value)/Height/ogc_mm_per_pixel;
+  FScaleY:=(FLeftTop.y-value)/Height/CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 procedure TTileViewer.SetCanvasWidth(value:Double);
 begin
-  FScaleX:=value/Width/ogc_mm_per_pixel;
+  FScaleX:=value/Width/CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 procedure TTileViewer.SetCanvasHeight(value:Double);
 begin
-  FScaleY:=value/Height/ogc_mm_per_pixel;
+  FScaleY:=value/Height/CurrentTileMatrixSet.MeterPerPixel;
 end;
 
 procedure TTileViewer.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
@@ -797,8 +816,8 @@ procedure TTileViewer.MouseMove(Shift: TShiftState; X, Y: Integer);
 var vec:TDoublePoint;
 begin
   if FMovementEnabled then begin
-    vec.x:=+(FMovementCursor.X-X)*FScaleX*ogc_mm_per_pixel;
-    vec.y:=-(FMovementCursor.Y-Y)*FScaleY*ogc_mm_per_pixel;
+    vec.x:=+(FMovementCursor.X-X)*FScaleX*CurrentTileMatrixSet.MeterPerPixel;
+    vec.y:=-(FMovementCursor.Y-Y)*FScaleY*CurrentTileMatrixSet.MeterPerPixel;
     PanToPoint(FMovementCenter+vec);
     Paint;
   end;
@@ -836,10 +855,10 @@ end;
 function TTileViewer.TileToCanvasRect(ATile:TTile):TRect;
 var x1,x2,y1,y2:integer;
 begin
-  x1:=round((ATile.LeftTop.x-Self.LeftTop.x)/FScaleX/ogc_mm_per_pixel);
-  y1:=round((ATile.LeftTop.y-Self.LeftTop.y)/FScaleY/ogc_mm_per_pixel);
-  x2:=round((ATile.RightBottom.x-Self.LeftTop.x)/FScaleX/ogc_mm_per_pixel);
-  y2:=round((ATile.RightBottom.y-Self.LeftTop.y)/FScaleY/ogc_mm_per_pixel);
+  x1:=round((ATile.LeftTop.x-Self.LeftTop.x)/FScaleX/CurrentTileMatrixSet.MeterPerPixel);
+  y1:=round((ATile.LeftTop.y-Self.LeftTop.y)/FScaleY/CurrentTileMatrixSet.MeterPerPixel);
+  x2:=round((ATile.RightBottom.x-Self.LeftTop.x)/FScaleX/CurrentTileMatrixSet.MeterPerPixel);
+  y2:=round((ATile.RightBottom.y-Self.LeftTop.y)/FScaleY/CurrentTileMatrixSet.MeterPerPixel);
   result:=Classes.Rect(x1,-y1,x2,-y2);
 end;
 
@@ -913,6 +932,8 @@ procedure TTileViewer.PaintInfo;
 var wmct:TWebMercator;
     wmct_xy,wmct_lt,wmct_rb:TDoublePoint;
     ltlg:TLatLong;
+    tile_idx:TTileIndex;
+    bestTM:TWMTS_TileMatrix;
     prompt_cursor,prompt_view,wmct_cursor,wmct_view,BestTM_Name:string;
     text_height,text_top,pw_cursor,pw_view,sw_cursor,sw_view,pl_view,sl_view:integer;
 begin
@@ -920,12 +941,15 @@ begin
     wmct_xy:=CursorPoint(FMouseCursor.X,FMouseCursor.Y);
     wmct_lt:=LeftTop;
     wmct_rb:=RightBottom;
-    ltlg:=WebmercatorXYToLatlong(wmct_xy);
+    //ltlg:=WebmercatorXYToLatlong(wmct_xy);
+    ltlg:=CurrentTileMatrixSet.Projection.XYToLatlong(wmct_xy);
+    bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX);
+    tile_idx:=bestTM.GetTileIndex(wmct_xy);
 
     Canvas.Pen.Color:=clNone;
     Canvas.Brush.Color:=clWhite;
     Canvas.Brush.Style:=bsSolid;
-    prompt_cursor:=Format(' cx=%d  cy=%d',[FMouseCursor.X,FMouseCursor.Y]);
+    prompt_cursor:=Format(' cx=%d  cy=%d  tc=%d  tr=%d',[FMouseCursor.X,FMouseCursor.Y,tile_idx.col,tile_idx.row]);
     //prompt_cursor:=Format('  lyr=%s  tm=%s',[CurrentLayer.Title, CurrentTileMatrixSet.Identifier]);
     prompt_view:=Format(' scale_x=%f  scale_y=%f',[FScaleX,FScaleY]);
     if PBestTileMatrix<>nil then prompt_view:=Format(' level=%s %s',[PBestTileMatrix.Identifier,prompt_view]);
@@ -1208,16 +1232,39 @@ end;
 procedure TTileViewer.ShowTiles(AScale:Double=0);
 var c1,c2,r1,r2,col,row:integer;
     bestTM:TWMTS_TileMatrix;
+    t1,t2:TTileIndex;
 begin
   //TilePool.Clear; //不清空了，所有瓦片都留在池内
   if AScale<=0 then
       bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX)
   else
       bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(AScale);
+  t1:=CurrentTileMatrixSet.Projection.GetWMTSTileIndex(bestTM.LeftTop,bestTM.Scale,bestTM.Width,bestTM.Height,LeftTop);
+  t2:=CurrentTileMatrixSet.Projection.GetWMTSTileIndex(bestTM.LeftTop,bestTM.Scale,bestTM.Width,bestTM.Height,RightBottom);
+  if t1.col<=t2.col then begin
+    c1:=t1.col;
+    c2:=t2.col;
+  end else begin
+    c1:=t2.col;
+    c2:=t1.col;
+  end;
+  if t1.row<=t2.row then begin
+    r1:=t1.row;
+    r2:=t2.row;
+  end else begin
+    r1:=t2.row;
+    r2:=t1.row;
+  end;
+  {
   c1:=trunc((LeftTop.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
   c2:=trunc((RightBottom.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
   r1:=trunc((bestTM.LeftTop.y-LeftTop.y) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Height);
   r2:=trunc((bestTM.LeftTop.y-RightBottom.y) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Height);
+  }
+  if c1<0 then c1:=0;
+  if r1<0 then r1:=0;
+  if c2>=bestTM.ColumnCount then c2:=bestTM.ColumnCount-1;
+  if r2>=bestTM.RowCount then r2:=bestTM.RowCount-1;
   for col:=c1 to c2 do begin
     for row:= r1 to r2 do begin
       TilePool.GetTile(CurrentLayer,bestTM,row,col);

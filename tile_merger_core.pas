@@ -5,16 +5,19 @@ unit tile_merger_core;
 interface
 
 uses
-  Classes, SysUtils, math;
+  Classes, SysUtils, math, tile_merger_projection;
 
 const cell_pixel_width = 256;
       webmercator_ec = 2*20037508.3427892;  //equator circumference
       webmercator_ms = 5.590822640285016E8; //WMTS L0 ScaleDenominator
 
 type
+  {
   TDoublePoint = record
     x,y:double;
   end;
+  }
+  TDoublePoint = TGeoPoint;
   TInt64Point = record
     x,y:int64;
   end;

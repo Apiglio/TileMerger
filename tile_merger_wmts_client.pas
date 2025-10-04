@@ -10,7 +10,7 @@ uses
   {$endif}
   Classes, SysUtils, fphttpclient, openssl, DOM, XMLRead,
   Dialogs,
-  tile_merger_core;
+  tile_merger_core, tile_merger_projection;
 
 type
 
@@ -22,6 +22,7 @@ type
     FTitle:String;
     FIdentifier:String;
     FFormat:String;
+    FStyle:String;
     FURLTemplate:String;
     FService:TObject; //forward TWMTS_Service;
   protected
@@ -44,6 +45,12 @@ type
     FColumnCount,FRowCount:Int64;
     FLeftTop:TDoublePoint;
   public
+    function GetTileRect(MatrixCol, MatrixRow: Integer):TGeoRectangle;
+    function GetTileIndex(Point:TGeoPoint):TTileIndex;
+  protected
+    function GetMeterPerPixel:TGeoCoord;
+    function GetUserAgent:String;
+  public
     property LeftTop:TDoublePoint read FLeftTop;
     property Scale:Double read FScale;
     property Width:Integer read FTileWidth;
@@ -51,6 +58,8 @@ type
     property ColumnCount:Int64 read FColumnCount;
     property RowCount:Int64 read FRowCount;
     property Identifier:String read FIdentifier;
+    property MeterPerPixel:TGeoCoord read GetMeterPerPixel;
+    property UserAgent:String read GetUserAgent;
   end;
 
   TWMTS_TileMatrixSet = class
@@ -58,16 +67,22 @@ type
     FTitle:String;
     FAbstract:String;
     FIdentifier:String;
+    FSupportedCRS:String;
+    FProjection:TProjection;
     FTileMatrixList:TList;
     FService:TObject; //forward TWMTS_Service;
   protected
     function GetTileMatrix(index:integer):TWMTS_TileMatrix;
     function GetTileMatrixCount:Integer;
+    function GetMeterPerPixel:TGeoCoord;
+    procedure SetMeterPerPixel(Value:TGeoCoord);
   public
     property Identifier:String read FIdentifier;
     property TileMatrixs[index:integer]:TWMTS_TileMatrix read GetTileMatrix;
     property TileMatrixCount:Integer read GetTileMatrixCount;
     property Service:TObject read FService;
+    property Projection:TProjection read FProjection;
+    property MeterPerPixel:TGeoCoord read GetMeterPerPixel write SetMeterPerPixel;
   public
     function BestFitTileMatrix(AScale:Double):TWMTS_TileMatrix; //根据地图比例尺选择最合适的TileMatrix
   public
@@ -82,13 +97,18 @@ type
       new_pattern:string;
     end;
     token:string;
+    fixed_meter_per_pixel:TGeoCoord;//0 means automatical
   end;
 
   TWMTS_Service = class
   private
     FTitle:String;
+    FVersion:String;
     FLayerList:TList;
     FTileMatrixSetList:TList;
+    FToken:String;
+    FKvpUrl:String;
+    FUserAgent:String;
   protected
     function GetLayer(index:integer):TWMTS_Layer;
     function GetLayerCount:Integer;
@@ -100,6 +120,9 @@ type
     property TileMatrixSets[index:integer]:TWMTS_TileMatrixSet read GetTileMatrixSet;
     property TileMatrixSetCount:Integer read GetTileMatrixSetCount;
     property Title:String read FTitle;
+    property Token:String read FToken;
+    property KvpUrl:String read FKvpUrl;
+    property UserAgent:String read FUserAgent write FUserAgent;
   public
     procedure LoadFromManifestXml(aUrl:string; ServiceConfig:TWMTS_Service_Config);
   public
@@ -135,7 +158,7 @@ uses tile_merger_view;
 function TWMTS_Layer.GetTileExtent:string;
 begin
   case lowercase(FFormat) of
-    'image/png':begin
+    'image/png','tiles':begin
       result:='png';
     end;
     'image/jpeg':begin
@@ -155,8 +178,36 @@ begin
   result:=StringReplace(result,'{TileMatrix}',aTileMatrix.FIdentifier,[rfIgnoreCase]);
   result:=StringReplace(result,'{TileRow}',IntToStr(aRow),[rfIgnoreCase]);
   result:=StringReplace(result,'{TileCol}',IntToStr(aCol),[rfIgnoreCase]);
+  result:=StringReplace(result,'{Layer}',FIdentifier,[rfIgnoreCase]);
+  result:=StringReplace(result,'{Token}',TWMTS_Service(FService).FToken,[rfIgnoreCase]);
+  result:=StringReplace(result,'{Version}',TWMTS_Service(FService).FVersion,[rfIgnoreCase]);
+  result:=StringReplace(result,'{Format}',FFormat,[rfIgnoreCase]);
+  result:=StringReplace(result,'{Style}',FStyle,[rfIgnoreCase]);
+
 end;
 
+
+{ TWMTS_TileMatrix }
+
+function TWMTS_TileMatrix.GetTileRect(MatrixCol, MatrixRow: Integer):TGeoRectangle;
+begin
+  result:=FParent.Projection.GetWMTSTileRect(FLeftTop, FScale, FTileWidth, FTileHeight, MatrixCol, MatrixRow);
+end;
+
+function TWMTS_TileMatrix.GetTileIndex(Point:TGeoPoint):TTileIndex;
+begin
+  result:=FParent.Projection.GetWMTSTileIndex(FLeftTop, FScale, FTileWidth, FTileHeight, Point);
+end;
+
+function TWMTS_TileMatrix.GetMeterPerPixel:TGeoCoord;
+begin
+  result:=FParent.FProjection.MetterPerPixel;
+end;
+
+function TWMTS_TileMatrix.GetUserAgent:String;
+begin
+  result:=TWMTS_Service(FParent.Service).UserAgent;
+end;
 
 { TWMTS_TileMatrixSet }
 
@@ -171,6 +222,16 @@ end;
 function TWMTS_TileMatrixSet.GetTileMatrixCount:Integer;
 begin
   result:=FTileMatrixList.Count;
+end;
+
+function TWMTS_TileMatrixSet.GetMeterPerPixel:TGeoCoord;
+begin
+  result:=FProjection.MetterPerPixel;
+end;
+
+procedure TWMTS_TileMatrixSet.SetMeterPerPixel(Value:TGeoCoord);
+begin
+  FProjection.MetterPerPixel:=Value;
 end;
 
 function TWMTS_TileMatrixSet.BestFitTileMatrix(AScale:Double):TWMTS_TileMatrix;
@@ -273,7 +334,7 @@ var manifest:TMemoryStream;
     tmpLayer:TWMTS_Layer;
     tmpTileMatrix:TWMTS_TileMatrix;
     tmpTileMatrixSet:TWMTS_TileMatrixSet;
-    px,py:string;
+    px,py,kvp_url:string;
 begin
   manifest:=TMemoryStream.Create;
   try
@@ -285,6 +346,7 @@ begin
       Free;
     end;
     if manifest.Size=0 then exit;
+    FToken:=ServiceConfig.token;
     xml:=TXMLDocument.Create;
     try
       manifest.Position:=0;
@@ -294,6 +356,28 @@ begin
       node:=node.FindNode('ows:ServiceIdentification');
       node:=node.FindNode('ows:Title');
       FTitle:=node.FirstChild.NodeValue;
+      node:=node.ParentNode;
+      node:=node.FindNode('ows:ServiceTypeVersion');
+      FVersion:=node.FirstChild.NodeValue;
+      //读取KVP方法
+      FKvpUrl:='';
+      node:=xml.DocumentElement;
+      node:=node.FindNode('ows:OperationsMetadata');
+      len:=node.ChildNodes.Count;
+      for idx:=0 to len-1 do begin
+        content_node:=node.ChildNodes[idx];
+        if content_node.NodeName<>'ows:Operation' then continue;
+        if content_node.Attributes.GetNamedItem('name').NodeValue<>'GetTile' then continue;
+        content_node:=content_node.FindNode('ows:DCP');
+        content_node:=content_node.FindNode('ows:HTTP');
+        content_node:=content_node.FindNode('ows:Get');
+        kvp_url:=content_node.Attributes.GetNamedItem('xlink:href').FirstChild.NodeValue;
+        content_node:=content_node.FindNode('ows:Constraint');
+        content_node:=content_node.FindNode('ows:AllowedValues');
+        content_node:=content_node.FindNode('ows:Value');
+        if content_node.FirstChild.NodeValue='KVP' then
+          FKvpUrl:=kvp_url+'Service=WMTS&request=GetTile&Version={Version}&Layer={Layer}&Style={Style}&TileMatrixSet={TileMatrixSet}&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&Format={Format}&tk={Token}';
+      end;
       //内容列表
       node:=xml.DocumentElement;
       node:=node.FindNode('Contents');
@@ -308,15 +392,22 @@ begin
             tmpLayer.FTitle:=content_node.FindNode('ows:Title').FirstChild.NodeValue;
             tmpLayer.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
             tmpLayer.FFormat:=content_node.FindNode('Format').FirstChild.NodeValue;
-            tmpLayer.FURLTemplate:=content_node.FindNode('ResourceURL').Attributes.GetNamedItem('template').NodeValue;
+            tmpLayer.FStyle:=content_node.FindNode('Style').FindNode('ows:Identifier').FirstChild.NodeValue;
+            if FKvpUrl='' then
+              tmpLayer.FURLTemplate:=content_node.FindNode('ResourceURL').Attributes.GetNamedItem('template').NodeValue
+            else
+              tmpLayer.FURLTemplate:=FKvpUrl;
             with ServiceConfig.url_replacement do
-              tmpLayer.FURLTemplate:=tmpLayer.FURLTemplate.Replace(old_pattern, new_pattern);
+              if old_pattern<>'' then
+                tmpLayer.FURLTemplate:=tmpLayer.FURLTemplate.Replace(old_pattern, new_pattern);
             tmpLayer.FService:=Self;
             FLayerList.Add(tmpLayer);
           end;
           'TileMatrixSet':begin
             tmpTileMatrixSet:=TWMTS_TileMatrixSet.Create;
             tmpTileMatrixSet.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
+            tmpTileMatrixSet.FSupportedCRS:=content_node.FindNode('ows:SupportedCRS').FirstChild.NodeValue;
+            tmpTileMatrixSet.FProjection:=TProjection.CreateProjectionByText(tmpTileMatrixSet.FSupportedCRS);
             if content_node.FindNode('ows:Abstract') <> nil then
               tmpTileMatrixSet.FAbstract:=content_node.FindNode('ows:Abstract').FirstChild.NodeValue;
             if content_node.FindNode('ows:Title') <> nil then
@@ -343,6 +434,13 @@ begin
               System.Delete(py,1,poss);
               tmpTileMatrix.FLeftTop.x:=StrToFloat(px);
               tmpTileMatrix.FLeftTop.y:=StrToFloat(py);
+              tmpTileMatrix.FLeftTop:=tmpTileMatrixSet.Projection.DecodeCoordinate(tmpTileMatrix.FLeftTop);
+              //calculate for non-standard meter_per_pixel
+              if ServiceConfig.fixed_meter_per_pixel=0 then with tmpTileMatrix do begin
+                tmpTileMatrixSet.Projection.MetterPerPixel:=2*abs(FLeftTop.lng)/FTileWidth/FColumnCount/FScale;
+              end else begin
+                tmpTileMatrixSet.Projection.MetterPerPixel:=ServiceConfig.fixed_meter_per_pixel;
+              end;
               tmpTileMatrixSet.FTileMatrixList.Add(tmpTileMatrix);
             end;
             FTileMatrixSetList.Add(tmpTileMatrixSet);
@@ -374,6 +472,7 @@ begin
   inherited Create;
   FLayerList:=TList.Create;
   FTileMatrixSetList:=TList.Create;
+  FUserAgent:='ArcGIS Client Using WinInet';
 end;
 
 destructor TWMTS_Service.Destroy;
@@ -414,6 +513,7 @@ constructor TWMTS_Client.Create;
 const _wayback_ = 'https://wayback-a.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/WMTSCapabilities.xml';
 var tmpService:TWMTS_Service;
     tmpServiceConfig:TWMTS_Service_Config;
+    len,idx:integer;
 begin
   inherited Create;
   FServiceList:=TList.Create;
@@ -421,18 +521,48 @@ begin
   tmpServiceConfig.url_replacement.old_pattern:='//wayback.';
   tmpServiceConfig.url_replacement.new_pattern:='//wayback-a.';
   tmpServiceConfig.token:='';
+  tmpServiceConfig.fixed_meter_per_pixel:=0;
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml(_wayback_, tmpServiceConfig);
   FServiceList.Add(tmpService);
+  {
+  //需要解决Time维度
+  tmpServiceConfig.url_replacement.old_pattern:='';
+  tmpServiceConfig.url_replacement.new_pattern:='';
+  tmpServiceConfig.token:='0e2c50def624b69b1dcb67f43f353c49';
+  tmpServiceConfig.fixed_meter_per_pixel:=0;
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml', ServiceConfig_Default);
+  FServiceList.Add(tmpService);
+  }
+  tmpServiceConfig.url_replacement.old_pattern:='';
+  tmpServiceConfig.url_replacement.new_pattern:='';
+  tmpServiceConfig.token:='0e2c50def624b69b1dcb67f43f353c49';
+  tmpServiceConfig.fixed_meter_per_pixel:=0.0002803138; //没招了就这样吧
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 
-  //tmpService:=TWMTS_Service.Create;
-  //tmpService.LoadFromManifestXml('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml', ServiceConfig_Default);
-  //FServiceList.Add(tmpService);
 
-  //tmpService:=TWMTS_Service.Create;
-  //tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts');
-  //FServiceList.Add(tmpService);
+  tmpServiceConfig.url_replacement.old_pattern:='';
+  tmpServiceConfig.url_replacement.new_pattern:='';
+  tmpServiceConfig.token:='ef1e65139e1e3571ff1338d9a72e8142';
+  tmpServiceConfig.fixed_meter_per_pixel:=0;
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
 
+  tmpServiceConfig.url_replacement.old_pattern:='';
+  tmpServiceConfig.url_replacement.new_pattern:='';
+  tmpServiceConfig.token:='';
+  tmpServiceConfig.fixed_meter_per_pixel:=0;
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('https://ows.terrestris.de/osm/service?service=WMTS&request=GetCapabilities', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+
+
+  //https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts
   //http://s0.fjmap.net:80/img_fj_2019/wmts
   //https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml
   //https://ows.terrestris.de/osm/service?service=WMTS&request=GetCapabilities
@@ -454,6 +584,7 @@ initialization
     token:='';
     url_replacement.old_pattern:='';
     url_replacement.new_pattern:='';
+    fixed_meter_per_pixel:=0;
   end;
 
 
