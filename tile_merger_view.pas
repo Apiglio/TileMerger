@@ -154,6 +154,7 @@ type
     procedure SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
     function GetCachePath:string;
   public
+    procedure InitializeLayerAndTileMatrixSet(layer:TWMTS_Layer;tms:TWMTS_TileMatrixSet);
     property CurrentService:TWMTS_Service read GetCurrentService;
     property CurrentLayer:TWMTS_Layer read FCurrentLayer write SetCurrentLayer;
     property CurrentTileMatrixSet:TWMTS_TileMatrixSet read FCurrentTileMatrixSet write SetCurrentTileMatrixSet;
@@ -696,7 +697,9 @@ end;
 
 procedure TTileViewer.SetCurrentLayer(value:TWMTS_Layer);
 var OldServer:TWMTS_Service;
+    OldCanvasLatLong:TGeoPoint;
 begin
+  OldCanvasLatLong:=CurrentTileMatrixSet.Projection.XYToLatlong(CursorPoint(Width div 2, Height div 2));
   if FCurrentLayer<>nil then OldServer:=FCurrentLayer.Service as TWMTS_Service;
   FCurrentLayer:=value;
   if FCurrentLayer.Service<>OldServer then begin
@@ -707,12 +710,16 @@ begin
   if FAutoFetchTile then begin
     FTilePool.Clear;
     ShowTiles;
+    Paint;
   end;
+  PanToPoint(CurrentTileMatrixSet.Projection.LatlongToXY(OldCanvasLatLong));
 end;
 
 procedure TTileViewer.SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
 var OldServer:TWMTS_Service;
+    OldCanvasLatLong:TGeoPoint;
 begin
+  OldCanvasLatLong:=CurrentTileMatrixSet.Projection.XYToLatlong(CursorPoint(Width div 2, Height div 2));
   if FCurrentTileMatrixSet<>nil then OldServer:=FCurrentTileMatrixSet.Service as TWMTS_Service;
   FCurrentTileMatrixSet:=value;
   if FCurrentTileMatrixSet.Service<>OldServer then begin
@@ -721,11 +728,18 @@ begin
   end;
   PBestTileMatrix:=value.BestFitTileMatrix(FScaleX);
   if FOnTileMatrixSetChange<>nil then FOnTileMatrixSetChange(Self);
+  PanToPoint(CurrentTileMatrixSet.Projection.LatlongToXY(OldCanvasLatLong));
 end;
 
 function TTileViewer.GetCachePath:string;
 begin
   result:=FTilePool.CachePath;
+end;
+
+procedure TTileViewer.InitializeLayerAndTileMatrixSet(layer:TWMTS_Layer;tms:TWMTS_TileMatrixSet);
+begin
+  FCurrentLayer:=layer;
+  FCurrentTileMatrixSet:=tms;
 end;
 
 function TTileViewer.GetRightBottom:TDoublePoint;
@@ -1008,6 +1022,8 @@ var index:integer;
     SrcRect,DstRect:TRect;
     bestTM:TWMTS_TileMatrix;
 begin
+  if CurrentTileMatrixSet=nil then exit;
+  if Width*Height=0 then exit;
   Canvas.Brush.Color:=clWhite;
   Canvas.Brush.Style:=bsSolid;
   Canvas.Clear;

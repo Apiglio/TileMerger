@@ -108,9 +108,11 @@ begin
     end;
   end;
   server:=WMTS_Client.Services[0];
-  FTileViewer.CurrentLayer:=server.Layers[0];
-  FTileViewer.CurrentTileMatrixSet:=server.TileMatrixSets[0];
+  //FTileViewer.CurrentLayer:=server.Layers[0];
+  //FTileViewer.CurrentTileMatrixSet:=server.TileMatrixSets[0];
+  FTileViewer.InitializeLayerAndTileMatrixSet(server.Layers[0],server.TileMatrixSets[0]);
   FTileViewer.AutoFetchTile:=true;
+  FTileViewer.Refresh;
 
   Caption:=_appname_;
   FTileViewer.OnLayerChange:=@UpdateStatusBar;
