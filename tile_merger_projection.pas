@@ -47,9 +47,9 @@ type
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; virtual; abstract;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; virtual;
     function GetWMTSTileRect(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; virtual; abstract;
+      TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; virtual;
     function GetWMTSTileIndex(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; virtual; abstract;
+      TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; virtual;
     class function CreateProjectionByText(urn_text:string):TProjection;
     constructor Create;
     property MetterPerPixel:TGeoCoord read FMetterPerPixel write FMetterPerPixel;
@@ -58,20 +58,12 @@ type
   TEquirectangular = class(TProjection)
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
-    function GetWMTSTileRect(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; override;
-    function GetWMTSTileIndex(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; override;
   end;
   EPSG_4087 = TEquirectangular;
 
   TWebMercator_AuxiliarySphere = class(TProjection)
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
-    function GetWMTSTileRect(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; override;
-    function GetWMTSTileIndex(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; override;
   end;
   EPSG_3857 = TWebMercator_AuxiliarySphere;
 
@@ -79,10 +71,6 @@ type
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint;override;
-    function GetWMTSTileRect(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; override;
-    function GetWMTSTileIndex(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
-      TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; override;
   end;
   EPSG_900913 = TGoogle_WebMercator;
 
@@ -90,10 +78,6 @@ type
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; override;
-    function GetWMTSTileRect(TopLeftCorner:TGeoPoint; ScaleDenominator:TGeoCoord;
-      TileWidth, TileHeight, MatrixCol, MatrixRow:Integer):TGeoRectangle; override;
-    function GetWMTSTileIndex(TopLeftCorner:TGeoPoint; ScaleDenominator:TGeoCoord;
-      TileWidth, TileHeight:Integer; Point:TGeoPoint):TTileIndex; override;
   end;
   EPSG_4490 = TCGCS;
 
@@ -149,21 +133,7 @@ begin
   FMetterPerPixel:=default_ogc_mm_per_pixel;
 end;
 
-{ TEquirectangular }
-
-function TEquirectangular.LatlongToXY(latlong: TGeoPoint): TGeoPoint;
-begin
-  Result.x := earth_radius*DegToRad(latlong.lng);
-  Result.y := earth_radius*DegToRad(latlong.lat);
-end;
-
-function TEquirectangular.XYToLatlong(coordxy: TGeoPoint): TGeoPoint;
-begin
-  Result.lng := RadToDeg(coordxy.x/earth_radius);
-  Result.lat := RadToDeg(coordxy.y/earth_radius);
-end;
-
-function TEquirectangular.GetWMTSTileRect(
+function TProjection.GetWMTSTileRect(
   TopLeftCorner: TGeoPoint; ScaleDenominator: TGeoCoord;
   TileWidth, TileHeight, MatrixCol, MatrixRow: Integer): TGeoRectangle;
 var
@@ -179,7 +149,7 @@ begin
   Result.RightBottom.y := Result.LeftTop.y - tileSpanY;
 end;
 
-function TEquirectangular.GetWMTSTileIndex(
+function TProjection.GetWMTSTileIndex(
   TopLeftCorner: TGeoPoint; ScaleDenominator: TGeoCoord;
   TileWidth, TileHeight: Integer; Point: TGeoPoint): TTileIndex;
 var
@@ -192,6 +162,21 @@ begin
   Result.col := Floor((Point.x - TopLeftCorner.x) / tileSpanX);
   Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
 end;
+
+{ TEquirectangular }
+
+function TEquirectangular.LatlongToXY(latlong: TGeoPoint): TGeoPoint;
+begin
+  Result.x := earth_radius*DegToRad(latlong.lng);
+  Result.y := earth_radius*DegToRad(latlong.lat);
+end;
+
+function TEquirectangular.XYToLatlong(coordxy: TGeoPoint): TGeoPoint;
+begin
+  Result.lng := RadToDeg(coordxy.x/earth_radius);
+  Result.lat := RadToDeg(coordxy.y/earth_radius);
+end;
+
 
 { TWebMercator_AuxiliarySphere }
 
@@ -211,36 +196,6 @@ begin
   ry := 0.5-coordxy.y/(-equator_circumference);
   result.x := 360*rx-180;
   result.y := 180*arctan(sinh(2*pi*ry-pi))/pi;
-end;
-
-function TWebMercator_AuxiliarySphere.GetWMTSTileRect(
-  TopLeftCorner: TGeoPoint; ScaleDenominator: TGeoCoord;
-  TileWidth, TileHeight, MatrixCol, MatrixRow: Integer): TGeoRectangle;
-var
-  pixelSize, tileSpanX, tileSpanY: TGeoCoord;
-begin
-  pixelSize := ScaleDenominator * FMetterPerPixel;
-  tileSpanX := TileWidth  * pixelSize;
-  tileSpanY := TileHeight * pixelSize;
-
-  Result.LeftTop.x     := TopLeftCorner.x + MatrixCol * tileSpanX;
-  Result.LeftTop.y     := TopLeftCorner.y - MatrixRow * tileSpanY;
-  Result.RightBottom.x := Result.LeftTop.x + tileSpanX;
-  Result.RightBottom.y := Result.LeftTop.y - tileSpanY;
-end;
-
-function TWebMercator_AuxiliarySphere.GetWMTSTileIndex(
-  TopLeftCorner: TGeoPoint; ScaleDenominator: TGeoCoord;
-  TileWidth, TileHeight: Integer; Point: TGeoPoint): TTileIndex;
-var
-  pixelSize, tileSpanX, tileSpanY: TGeoCoord;
-begin
-  pixelSize := ScaleDenominator * FMetterPerPixel;
-  tileSpanX := TileWidth  * pixelSize;
-  tileSpanY := TileHeight * pixelSize;
-
-  Result.col := Floor((Point.x - TopLeftCorner.x) / tileSpanX);
-  Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
 end;
 
 
@@ -273,36 +228,6 @@ begin
   Result.y := raw.lng;
 end;
 
-function TGoogle_WebMercator.GetWMTSTileRect(
-  TopLeftCorner: TGeoPoint; ScaleDenominator: TGeoCoord;
-  TileWidth, TileHeight, MatrixCol, MatrixRow: Integer): TGeoRectangle;
-var
-  pixelSize, tileSpanX, tileSpanY: TGeoCoord;
-begin
-  pixelSize := ScaleDenominator * FMetterPerPixel;
-  tileSpanX := TileWidth  * pixelSize;
-  tileSpanY := TileHeight * pixelSize;
-
-  Result.LeftTop.x     := TopLeftCorner.x + MatrixCol * tileSpanX;
-  Result.LeftTop.y     := TopLeftCorner.y - MatrixRow * tileSpanY;
-  Result.RightBottom.x := Result.LeftTop.x + tileSpanX;
-  Result.RightBottom.y := Result.LeftTop.y - tileSpanY;
-end;
-
-function TGoogle_WebMercator.GetWMTSTileIndex(
-  TopLeftCorner: TGeoPoint; ScaleDenominator: TGeoCoord;
-  TileWidth, TileHeight: Integer; Point: TGeoPoint): TTileIndex;
-var
-  pixelSize, tileSpanX, tileSpanY: TGeoCoord;
-begin
-  pixelSize := ScaleDenominator * FMetterPerPixel;
-  tileSpanX := TileWidth  * pixelSize;
-  tileSpanY := TileHeight * pixelSize;
-
-  Result.col := Floor((Point.x - TopLeftCorner.x) / tileSpanX);
-  Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
-end;
-
 
 { TCGCS }
 
@@ -325,35 +250,6 @@ begin
   Result.y := DegToRad(raw.lng) * earth_radius;
 end;
 
-function TCGCS.GetWMTSTileRect(
-  TopLeftCorner:TGeoPoint; ScaleDenominator:TGeoCoord;
-  TileWidth, TileHeight, MatrixCol, MatrixRow:Integer):TGeoRectangle;
-var
-  metersPerPixel, tileSpanX, tileSpanY: TGeoCoord;
-begin
-  metersPerPixel := ScaleDenominator * FMetterPerPixel;
-  tileSpanX := TileWidth  * metersPerPixel;
-  tileSpanY := TileHeight * metersPerPixel;
-
-  Result.LeftTop.x     := TopLeftCorner.x + MatrixCol * tileSpanX;
-  Result.LeftTop.y     := TopLeftCorner.y - MatrixRow * tileSpanY;
-  Result.RightBottom.x := Result.LeftTop.x + tileSpanX;
-  Result.RightBottom.y := Result.LeftTop.y - tileSpanY;
-end;
-
-function TCGCS.GetWMTSTileIndex(
-  TopLeftCorner:TGeoPoint; ScaleDenominator:TGeoCoord;
-  TileWidth, TileHeight:Integer; Point:TGeoPoint):TTileIndex;
-var
-  metersPerPixel, tileSpanX, tileSpanY: TGeoCoord;
-begin
-  metersPerPixel := ScaleDenominator * FMetterPerPixel;
-  tileSpanX := TileWidth  * metersPerPixel;
-  tileSpanY := TileHeight * metersPerPixel;
-
-  Result.col := Floor((Point.x - TopLeftCorner.x) / tileSpanX);
-  Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
-end;
 
 end.
 

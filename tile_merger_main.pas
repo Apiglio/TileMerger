@@ -10,7 +10,7 @@ uses
   {$ifdef windows}
   Windows,
   {$endif}
-  tile_merger_core, tile_merger_view, tile_merger_wmts_client;
+  tile_merger_view, tile_merger_wmts_client;
 
 const
   _appname_ = 'Apiglio TileMerger';
@@ -108,8 +108,6 @@ begin
     end;
   end;
   server:=WMTS_Client.Services[0];
-  //FTileViewer.CurrentLayer:=server.Layers[0];
-  //FTileViewer.CurrentTileMatrixSet:=server.TileMatrixSets[0];
   FTileViewer.InitializeLayerAndTileMatrixSet(server.Layers[0],server.TileMatrixSets[0]);
   FTileViewer.AutoFetchTile:=true;
   FTileViewer.Refresh;

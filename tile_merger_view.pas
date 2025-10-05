@@ -1271,12 +1271,6 @@ begin
     r1:=t2.row;
     r2:=t1.row;
   end;
-  {
-  c1:=trunc((LeftTop.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
-  c2:=trunc((RightBottom.x-bestTM.LeftTop.x) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Width);
-  r1:=trunc((bestTM.LeftTop.y-LeftTop.y) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Height);
-  r2:=trunc((bestTM.LeftTop.y-RightBottom.y) / bestTM.Scale/ogc_mm_per_pixel/bestTM.Height);
-  }
   if c1<0 then c1:=0;
   if r1<0 then r1:=0;
   if c2>=bestTM.ColumnCount then c2:=bestTM.ColumnCount-1;

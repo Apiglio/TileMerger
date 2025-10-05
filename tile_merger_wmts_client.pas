@@ -150,7 +150,7 @@ var
   ServiceConfig_Default:TWMTS_Service_Config;
 
 implementation
-uses tile_merger_view;
+uses tile_merger_view, math;
 
 
 { TWMTS_Layer }
@@ -242,10 +242,10 @@ begin
   result:=nil;
   len:=FTileMatrixList.Count;
   if len<1 then exit;
-  sca_1:=webmercator_ms;  //min scale
+  sca_1:=MaxDouble;       //min scale (webmercator_ms)
   sca_2:=-1;              //max scale below (or equal to) AScale
-  sca_3:=webmercator_ms;  //min scale above (or equal to) AScale
-  sca_4:=-1;              //max scale
+  sca_3:=MaxDouble;       //min scale above (or equal to) AScale
+  sca_4:=-1;              //max scale (webmercator_ms)
   tm_1:=nil;
   tm_2:=nil;
   tm_3:=nil;
@@ -513,7 +513,6 @@ constructor TWMTS_Client.Create;
 const _wayback_ = 'https://wayback-a.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/WMTSCapabilities.xml';
 var tmpService:TWMTS_Service;
     tmpServiceConfig:TWMTS_Service_Config;
-    len,idx:integer;
 begin
   inherited Create;
   FServiceList:=TList.Create;

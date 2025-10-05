@@ -5,18 +5,9 @@ unit tile_merger_core;
 interface
 
 uses
-  Classes, SysUtils, math, tile_merger_projection;
-
-const cell_pixel_width = 256;
-      webmercator_ec = 2*20037508.3427892;  //equator circumference
-      webmercator_ms = 5.590822640285016E8; //WMTS L0 ScaleDenominator
+  Classes, SysUtils, tile_merger_projection;
 
 type
-  {
-  TDoublePoint = record
-    x,y:double;
-  end;
-  }
   TDoublePoint = TGeoPoint;
   TInt64Point = record
     x,y:int64;
@@ -29,11 +20,6 @@ type
 
 function WebMercator(X,Y:Int64;Level:Byte):TWebMercator;
 function LatLong(Lng,Lat:Double):TLatLong;
-function LatlongToWebmercator(latlong:TLatLong;level:integer):TWebMercator;
-function LatlongToWebmercatorXY(latlong:TLatLong):TDoublePoint;
-function WebmercatorToXY(wmct:TWebMercator):TDoublePoint;
-function WebmercatorToLatlong(wmct:TWebMercator):TLatLong;
-function WebmercatorXYToLatlong(wmct_xy:TDoublePoint):TLatLong;
 operator +(ina,inb:TDoublePoint):TDoublePoint;
 operator -(ina,inb:TDoublePoint):TDoublePoint;
 operator +(ina,inb:TInt64Point):TInt64Point;
@@ -62,64 +48,6 @@ function LatLong(Lng,Lat:Double):TLatLong;
 begin
   result.x:=Lng;
   result.y:=Lat;
-end;
-
-(*
-tileX=int( (lng+180)/360*2^z)
-tileY=(1- arsinh(tan(lat*π/180))/π) *2^(z-1)
-*)
-function LatlongToWebmercator(latlong:TLatLong;level:integer):TWebMercator;
-var lat,lng:double;
-    rx,ry:int64;
-begin
-  lng:=latlong.x;
-  lat:=latlong.y;
-  rx:=round((((lng+180)/360)*pow(2,level))*cell_pixel_width);
-  ry:=round(((1-arcsinh(tan(lat*pi/180))/pi) * pow(2,level-1))*cell_pixel_width);
-  result.coord.x:=rx;
-  result.coord.y:=ry;
-  result.level:=level;
-end;
-
-function LatlongToWebmercatorXY(latlong:TLatLong):TDoublePoint;
-var lat,lng,rx,ry:double;
-begin
-  lng:=latlong.x;
-  lat:=latlong.y;
-  rx:=(lng+180)/360;
-  ry:=(arcsinh(tan(lat*pi/180.0))+pi)/pi/2;
-  result.x:=(rx-0.5)*webmercator_ec;
-  result.y:=(ry-0.5)*webmercator_ec;
-end;
-
-function WebmercatorToXY(wmct:TWebMercator):TDoublePoint;
-begin
-  result.x:=(wmct.coord.x/pow(2,wmct.level)/cell_pixel_width-0.5)*webmercator_ec;
-  result.y:=-(wmct.coord.y/pow(2,wmct.level)/cell_pixel_width-0.5)*webmercator_ec;
-end;
-
-(*
-lng=tileX/2^z * 360-180
-lat=arctan(sinh(π*(1-2*tileY/2^z)))*180/π
-*)
-function WebmercatorToLatlong(wmct:TWebMercator):TLatLong;
-var lat,lng,rx,ry:double;
-begin
-  rx:=wmct.coord.x/cell_pixel_width;
-  ry:=wmct.coord.y/cell_pixel_width;
-  lng:=rx/pow(2,wmct.level)*360-180;
-  lat:=arctan(sinh(pi*(1-2*ry/pow(2,wmct.level))))*180/pi;
-  result.x:=lng;
-  result.y:=lat;
-end;
-
-function WebmercatorXYToLatlong(wmct_xy:TDoublePoint):TLatLong;
-var rx,ry:double;
-begin
-  rx:=wmct_xy.x/webmercator_ec+0.5;
-  ry:=0.5-wmct_xy.y/(-webmercator_ec);
-  result.x:=360*rx-180;
-  result.y:=180*arctan(sinh(2*pi*ry-pi))/pi;
 end;
 
 operator +(ina,inb:TDoublePoint):TDoublePoint;
