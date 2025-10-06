@@ -28,14 +28,14 @@ type
     FPicture:TPicture;
     FEnabled:Boolean;
     FIndirect:Boolean;
-    FLeftTop:TDoublePoint;
+    FLeftTop:TGeoPoint;
     FScaleX:Double;
     FScaleY:Double;
     FPixelWidth:Int64;
     FPixelHeight:Int64;
     FImageFormat:TTileFormat;
   protected
-    function GetRightBottom:TDoublePoint;
+    function GetRightBottom:TGeoPoint;
     function GetTileTop:Double;
     function GetTileLeft:Double;
     function GetTileRight:Double;
@@ -45,8 +45,8 @@ type
     function GetCanvas:TCanvas;
   public
     procedure SetTileRange(ALeft,ATop,ARight,ABottom:Double);
-    property LeftTop:TDoublePoint read FLeftTop;
-    property RightBottom:TDoublePoint read GetRightBottom;
+    property LeftTop:TGeoPoint read FLeftTop;
+    property RightBottom:TGeoPoint read GetRightBottom;
     property TileTop:Double read GetTileTop;
     property TileLeft:Double read GetTileLeft;
     property TileWidth:Double read GetTileWidth;
@@ -61,8 +61,8 @@ type
     TileMatrix:TWMTS_TileMatrix;
     Row,Col:Integer;
   public
-    function GetCanvasPoint(wmct_xy:TDoublePoint):TPoint;
-    function GetMercatorXY(canvas_point:TPoint):TDoublePoint;
+    function GetCanvasPoint(wmct_xy:TGeoPoint):TPoint;
+    function GetMercatorXY(canvas_point:TPoint):TGeoPoint;
   public
     constructor CreateFromFile(const AFileName:String;AFormat:TTileFormat);
     constructor CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer);
@@ -127,7 +127,7 @@ type
   TTileViewer = class(TCustomControl)
   private
     //只通过以下两个参数和width、height定位画幅，其他均通过Get/Set获得
-    FLeftTop:TDoublePoint;
+    FLeftTop:TGeoPoint;
     FScaleX:Double;
     FScaleY:Double;
   private
@@ -139,7 +139,7 @@ type
     FMouseCursor:TPoint;
     FMovementCursor:TPoint;
     FMovementEnabled:Boolean;
-    FMovementCenter:TDoublePoint;
+    FMovementCenter:TGeoPoint;
   private
     FShowGrid:Boolean;
     FShowInfo:Boolean;
@@ -166,7 +166,7 @@ type
     property ForceFetchTile:Boolean read FForceFetchTile write SetForceFetchTile;
     property CachePath:string read GetCachePath;
   protected
-    function GetRightBottom:TDoublePoint;
+    function GetRightBottom:TGeoPoint;
     function GetCanvasTop:Double;
     function GetCanvasLeft:Double;
     function GetCanvasRight:Double;
@@ -180,8 +180,8 @@ type
     procedure SetCanvasWidth(value:Double);
     procedure SetCanvasHeight(value:Double);
   public
-    property LeftTop:TDoublePoint read FLeftTop;
-    property RightBottom:TDoublePoint read GetRightBottom;
+    property LeftTop:TGeoPoint read FLeftTop;
+    property RightBottom:TGeoPoint read GetRightBottom;
     property CanvasTop:Double read GetCanvasTop write SetCanvasTop;
     property CanvasLeft:Double read GetCanvasLeft write SetCanvasLeft;
     property CanvasRight:Double read GetCanvasRight write SetCanvasRight;
@@ -200,12 +200,12 @@ type
   protected
     function TileVisible(ATile:TTile):Boolean;
     function TileToCanvasRect(ATile:TTile):TRect;
-    function CanvasCenter:TDoublePoint;
+    function CanvasCenter:TGeoPoint;
     procedure GetCanvasRange(out vLeft,vTop,vRight,vBottom:Double);
-    function CursorPoint(X,Y:Integer):TDoublePoint;
+    function CursorPoint(X,Y:Integer):TGeoPoint;
     function LocatePoint(CoordX,CoordY:Double):TPoint;
-    procedure PanToPoint(APoint:TDoublePoint);
-    procedure Zoom(AOrigin:TDoublePoint;AScale:Double);
+    procedure PanToPoint(APoint:TGeoPoint);
+    procedure Zoom(AOrigin:TGeoPoint;AScale:Double);
     procedure ZoomTo(AScale:Double);
     procedure ProportionCorrection;
     procedure PaintInfo;
@@ -272,7 +272,7 @@ end;
 
 { TTile }
 
-function TTile.GetRightBottom:TDoublePoint;
+function TTile.GetRightBottom:TGeoPoint;
 begin
   result.x:=FLeftTop.x+FScaleX*Width*TileMatrix.MeterPerPixel;
   result.y:=FLeftTop.y-FScaleY*Height*TileMatrix.MeterPerPixel;
@@ -325,13 +325,13 @@ begin
   FScaleY:=(ATop-ABottom)/TileMatrix.MeterPerPixel/FPixelHeight;
 end;
 
-function TTile.GetCanvasPoint(wmct_xy:TDoublePoint):TPoint;
+function TTile.GetCanvasPoint(wmct_xy:TGeoPoint):TPoint;
 begin
   result.x:=+round((wmct_xy.x-FLeftTop.x)/FScaleX/TileMatrix.MeterPerPixel);
   result.y:=-round((wmct_xy.y-FLeftTop.y)/FScaleY/TileMatrix.MeterPerPixel);
 end;
 
-function TTile.GetMercatorXY(canvas_point:TPoint):TDoublePoint;
+function TTile.GetMercatorXY(canvas_point:TPoint):TGeoPoint;
 begin
   result.x:=FLeftTop.x+FScaleX*canvas_point.x*TileMatrix.MeterPerPixel;
   result.y:=FLeftTop.y-FScaleY*canvas_point.y*TileMatrix.MeterPerPixel;
@@ -742,7 +742,7 @@ begin
   FCurrentTileMatrixSet:=tms;
 end;
 
-function TTileViewer.GetRightBottom:TDoublePoint;
+function TTileViewer.GetRightBottom:TGeoPoint;
 begin
   result.x:=FLeftTop.x+FScaleX*Width*CurrentTileMatrixSet.MeterPerPixel;
   result.y:=FLeftTop.y-FScaleY*Height*CurrentTileMatrixSet.MeterPerPixel;
@@ -827,7 +827,7 @@ begin
 end;
 
 procedure TTileViewer.MouseMove(Shift: TShiftState; X, Y: Integer);
-var vec:TDoublePoint;
+var vec:TGeoPoint;
 begin
   if FMovementEnabled then begin
     vec.x:=+(FMovementCursor.X-X)*FScaleX*CurrentTileMatrixSet.MeterPerPixel;
@@ -876,7 +876,7 @@ begin
   result:=Classes.Rect(x1,-y1,x2,-y2);
 end;
 
-function TTileViewer.CanvasCenter:TDoublePoint;
+function TTileViewer.CanvasCenter:TGeoPoint;
 begin
   result.x:=FLeftTop.x+CanvasWidth/2;
   result.y:=FLeftTop.y-CanvasHeight/2;
@@ -887,7 +887,7 @@ begin
   TTile.GetWorldRange(FTilePool.FTileList,vLeft,vTop,vRight,vBottom);
 end;
 
-function TTileViewer.CursorPoint(X,Y:Integer):TDoublePoint;
+function TTileViewer.CursorPoint(X,Y:Integer):TGeoPoint;
 begin
   result.x:=FLeftTop.x+CanvasWidth*X/Width;
   result.y:=FLeftTop.y-CanvasHeight*Y/Height;
@@ -899,8 +899,8 @@ begin
   result.Y:=round(Height*(FLeftTop.y-CoordY)/CanvasHeight);
 end;
 
-procedure TTileViewer.PanToPoint(APoint:TDoublePoint);
-var offset:TDoublePoint;
+procedure TTileViewer.PanToPoint(APoint:TGeoPoint);
+var offset:TGeoPoint;
 begin
   offset.x:=CanvasWidth/2;
   offset.y:=-CanvasHeight/2;
@@ -908,8 +908,8 @@ begin
   if FAutoFetchTile then ShowTiles;
 end;
 
-procedure TTileViewer.Zoom(AOrigin:TDoublePoint;AScale:Double);
-var offset:TDoublePoint;
+procedure TTileViewer.Zoom(AOrigin:TGeoPoint;AScale:Double);
+var offset:TGeoPoint;
 begin
   if (AScale<1e-9) or (AScale>1e9) then raise ETileRangeError.Create(AScale);
   offset:=AOrigin-FLeftTop;
@@ -943,9 +943,8 @@ begin
 end;
 
 procedure TTileViewer.PaintInfo;
-var wmct:TWebMercator;
-    wmct_xy,wmct_lt,wmct_rb:TDoublePoint;
-    ltlg:TLatLong;
+var wmct_xy,wmct_lt,wmct_rb:TGeoPoint;
+    latlong:TGeoPoint;
     tile_idx:TTileIndex;
     bestTM:TWMTS_TileMatrix;
     prompt_cursor,prompt_view,wmct_cursor,wmct_view,BestTM_Name:string;
@@ -955,8 +954,7 @@ begin
     wmct_xy:=CursorPoint(FMouseCursor.X,FMouseCursor.Y);
     wmct_lt:=LeftTop;
     wmct_rb:=RightBottom;
-    //ltlg:=WebmercatorXYToLatlong(wmct_xy);
-    ltlg:=CurrentTileMatrixSet.Projection.XYToLatlong(wmct_xy);
+    latlong:=CurrentTileMatrixSet.Projection.XYToLatlong(wmct_xy);
     bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX);
     tile_idx:=bestTM.GetTileIndex(wmct_xy);
 
@@ -967,7 +965,7 @@ begin
     //prompt_cursor:=Format('  lyr=%s  tm=%s',[CurrentLayer.Title, CurrentTileMatrixSet.Identifier]);
     prompt_view:=Format(' scale_x=%f  scale_y=%f',[FScaleX,FScaleY]);
     if PBestTileMatrix<>nil then prompt_view:=Format(' level=%s %s',[PBestTileMatrix.Identifier,prompt_view]);
-    wmct_cursor:=Format(' X=%f  Y=%f  lng=%3.6f  lat=%2.6f',[wmct_xy.x,wmct_xy.y,ltlg.x,ltlg.y]);
+    wmct_cursor:=Format(' X=%f  Y=%f  lng=%3.6f  lat=%2.6f',[wmct_xy.x,wmct_xy.y,latlong.x,latlong.y]);
     wmct_view:=Format(' l=%f  r=%f  t=%f  b=%f',[wmct_lt.x,wmct_rb.x,wmct_lt.y,wmct_rb.y]);
     text_height:=Canvas.TextHeight(prompt_cursor);
     text_top:=Height-text_height;
@@ -1079,7 +1077,7 @@ begin
 end;
 
 procedure TTileViewer.ZoomToWorld;
-var origin:TDoublePoint;
+var origin:TGeoPoint;
 begin
   origin.x:=0;
   origin.y:=0;
@@ -1200,6 +1198,10 @@ begin
   end;
 end;
 
+//# tfw file
+//# x' = Ax + Cy + E
+//# y' = Bx + Dy + F
+
 procedure TTileViewer.SaveToGeoTiff(FilenameWithoutExt:String);
 var StopDrawingState:boolean;
     l,t,r,b:double;
@@ -1207,7 +1209,7 @@ var StopDrawingState:boolean;
     //tmpTifFile:TFPCustomImage;
     //tmpTiffWriter:TFPWriterTiff;
     tmpTile:TTile;
-    lt,rb:TDoublePoint;
+    lt,rb:TGeoPoint;
 begin
   if FTilePool.FTileList.Count<1 then exit;
   StopDrawingState:=StopDrawing;

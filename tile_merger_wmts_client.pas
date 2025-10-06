@@ -43,7 +43,7 @@ type
     FScale:Double;
     FTileWidth,FTileHeight:Integer;
     FColumnCount,FRowCount:Int64;
-    FLeftTop:TDoublePoint;
+    FLeftTop:TGeoPoint;
   public
     function GetTileRect(MatrixCol, MatrixRow: Integer):TGeoRectangle;
     function GetTileIndex(Point:TGeoPoint):TTileIndex;
@@ -51,7 +51,7 @@ type
     function GetMeterPerPixel:TGeoCoord;
     function GetUserAgent:String;
   public
-    property LeftTop:TDoublePoint read FLeftTop;
+    property LeftTop:TGeoPoint read FLeftTop;
     property Scale:Double read FScale;
     property Width:Integer read FTileWidth;
     property Height:Integer read FTileHeight;

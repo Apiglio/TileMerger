@@ -81,8 +81,23 @@ type
   end;
   EPSG_4490 = TCGCS;
 
+  operator +(ina,inb:TGeoPoint):TGeoPoint;
+  operator -(ina,inb:TGeoPoint):TGeoPoint;
+
 implementation
 uses math;
+
+operator +(ina,inb:TGeoPoint):TGeoPoint;
+begin
+  result.x:=ina.x+inb.x;
+  result.y:=ina.y+inb.y;
+end;
+
+operator -(ina,inb:TGeoPoint):TGeoPoint;
+begin
+  result.x:=ina.x-inb.x;
+  result.y:=ina.y-inb.y;
+end;
 
 
 { TGeoRectangle }
