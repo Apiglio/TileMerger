@@ -50,6 +50,8 @@ type
       TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; virtual;
     function GetWMTSTileIndex(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
       TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; virtual;
+    function ScaleFactorByLatlong(latlong: TGeoPoint):Double; virtual;
+    function ScaleFactorByXY(coordxy: TGeoPoint):Double; virtual;
     class function CreateProjectionByText(urn_text:string):TProjection;
     constructor Create;
     property MetterPerPixel:TGeoCoord read FMetterPerPixel write FMetterPerPixel;
@@ -58,23 +60,27 @@ type
   TEquirectangular = class(TProjection)
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
+    function ScaleFactorByLatlong(latlong: TGeoPoint): Double; override;
+    function ScaleFactorByXY(coordxy: TGeoPoint): Double; override;
   end;
   EPSG_4087 = TEquirectangular;
 
   TWebMercator_AuxiliarySphere = class(TProjection)
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
+    function ScaleFactorByLatlong(latlong: TGeoPoint):Double; override;
+    function ScaleFactorByXY(coordxy: TGeoPoint):Double; override;
   end;
   EPSG_3857 = TWebMercator_AuxiliarySphere;
 
-  TGoogle_WebMercator = class(TProjection)
+  TGoogle_WebMercator = class(TWebMercator_AuxiliarySphere)
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
-    function DecodeCoordinate(raw:TGeoPoint):TGeoPoint;override;
+    function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; override;
   end;
   EPSG_900913 = TGoogle_WebMercator;
 
-  TCGCS = class(TProjection)
+  TCGCS = class(TEquirectangular)
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; override;
@@ -178,6 +184,16 @@ begin
   Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
 end;
 
+function TProjection.ScaleFactorByLatlong(latlong: TGeoPoint):Double;
+begin
+  result:=1.0; //默认的投影不计算长度形变
+end;
+
+function TProjection.ScaleFactorByXY(coordxy: TGeoPoint):Double;
+begin
+  result:=1.0; //默认的投影不计算长度形变
+end;
+
 { TEquirectangular }
 
 function TEquirectangular.LatlongToXY(latlong: TGeoPoint): TGeoPoint;
@@ -192,6 +208,17 @@ begin
   Result.lat := RadToDeg(coordxy.y/earth_radius);
 end;
 
+function TEquirectangular.ScaleFactorByLatlong(latlong: TGeoPoint): Double;
+begin
+  result := 1.0/cos(DegToRad(latlong.lat));
+end;
+
+function TEquirectangular.ScaleFactorByXY(coordxy: TGeoPoint): Double;
+var latlong:TGeoPoint;
+begin
+  latlong:=XYToLatlong(coordxy);
+  result := ScaleFactorByLatlong(latlong);
+end;
 
 { TWebMercator_AuxiliarySphere }
 
@@ -211,6 +238,18 @@ begin
   ry := 0.5-coordxy.y/(-equator_circumference);
   result.x := 360*rx-180;
   result.y := 180*arctan(sinh(2*pi*ry-pi))/pi;
+end;
+
+function TWebMercator_AuxiliarySphere.ScaleFactorByLatlong(latlong: TGeoPoint):Double;
+var coordxy:TGeoPoint;
+begin
+  coordxy:=LatlongToXY(latlong);
+  result:=cosh(coordxy.y / earth_radius);
+end;
+
+function TWebMercator_AuxiliarySphere.ScaleFactorByXY(coordxy: TGeoPoint):Double;
+begin
+  result:=cosh(coordxy.y / earth_radius);
 end;
 
 
