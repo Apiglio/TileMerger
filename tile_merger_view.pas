@@ -10,11 +10,8 @@ uses
   {$endif}
   Classes, SysUtils, Controls, Graphics, FileUtil, FPimage, FPWriteTIFF,
   fphttpclient, openssl, URIParser,
-  tile_merger_core, tile_merger_projection, tile_merger_wmts_client, tile_merger_tiff;
-{
-const ogc_ppi = 90.71446714322;
-      ogc_mm_per_pixel = 0.00028;
-}
+  tile_merger_projection, tile_merger_wmts_client, tile_merger_tiff;
+
 type
 
   ETileRangeError = class(Exception)
@@ -235,7 +232,7 @@ type
   end;
 
 implementation
-uses debugline;
+uses debugline, math;
 
 function fetch_tile_result_to_str(fetchresult:TFetchTileResult):string;
 begin
@@ -989,7 +986,7 @@ begin
   wm2   := CursorPoint(sp2.x, sp2.y);
   cw    := wm2.x - wm1.x;
   ch    := wm1.y - wm2.y;
-  if (wm1.y>=webmercator_min_y) and (wm1.y<=webmercator_max_y) then begin
+  if (wm1.y>=-MaxDouble) and (wm1.y<=MaxDouble) then begin
     //drawing left-top scale
     scale_factor:=CurrentTileMatrixSet.Projection.ScaleFactorByXY(wm1);
     rw:=BestScaleDistance(cw/scale_factor/6);
@@ -1021,7 +1018,7 @@ begin
     Canvas.Font.Color  := clBlack;
     Canvas.TextOut(sp1.X,     sp1.y + th,     scale_text);
   end;
-  if (wm2.y>=webmercator_min_y) and (wm2.y<=webmercator_max_y) then begin
+  if (wm2.y>=-MaxDouble) and (wm2.y<=MaxDouble) then begin
     //drawing right-bottom scale
     scale_factor:=CurrentTileMatrixSet.Projection.ScaleFactorByXY(wm2);
     rw:=BestScaleDistance(cw/scale_factor/6);
