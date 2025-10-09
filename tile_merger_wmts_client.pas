@@ -9,8 +9,7 @@ uses
   cthreads,
   {$endif}
   Classes, SysUtils, fphttpclient, openssl, DOM, XMLRead,
-  Dialogs,
-  tile_merger_core, tile_merger_projection;
+  Dialogs, tile_merger_projection;
 
 type
 

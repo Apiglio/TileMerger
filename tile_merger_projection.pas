@@ -39,6 +39,10 @@ type
       1:(col,row:Integer);
   end;
 
+  //全部使用投影坐标米单位，即默认XY
+  //CRS坐标统一使用DecodeCoordinate转换为XY
+  //decode: CRS  -->  XY
+  //encode: XY   -->  CRS
   TProjection = class
   private
     FMetterPerPixel:TGeoCoord;
@@ -46,6 +50,7 @@ type
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; virtual; abstract;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; virtual; abstract;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; virtual;
+    function EncodeCoordinate(coordxy:TGeoPoint):TGeoPoint; virtual;
     function GetWMTSTileRect(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
       TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; virtual;
     function GetWMTSTileIndex(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
@@ -77,6 +82,7 @@ type
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; override;
+    function EncodeCoordinate(coordxy:TGeoPoint):TGeoPoint; override;
   end;
   EPSG_900913 = TGoogle_WebMercator;
 
@@ -84,6 +90,7 @@ type
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; override;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; override;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; override;
+    function EncodeCoordinate(coordxy:TGeoPoint):TGeoPoint; override;
   end;
   EPSG_4490 = TCGCS;
 
@@ -134,6 +141,11 @@ end;
 function TProjection.DecodeCoordinate(raw:TGeoPoint):TGeoPoint;
 begin
   result := raw;
+end;
+
+function TProjection.EncodeCoordinate(coordxy:TGeoPoint):TGeoPoint;
+begin
+  result := coordxy;
 end;
 
 class function TProjection.CreateProjectionByText(urn_text:string):TProjection;
@@ -282,6 +294,13 @@ begin
   Result.y := raw.lng;
 end;
 
+function TGoogle_WebMercator.EncodeCoordinate(coordxy:TGeoPoint):TGeoPoint;
+begin
+  //!!! tfw is not "x is lat and y is lng"
+  Result.lng := coordxy.x;
+  Result.lat := coordxy.y;
+end;
+
 
 { TCGCS }
 
@@ -302,6 +321,13 @@ begin
   //x is lat and y is lng
   Result.x := DegToRad(raw.lat) * earth_radius;
   Result.y := DegToRad(raw.lng) * earth_radius;
+end;
+
+function TCGCS.EncodeCoordinate(coordxy:TGeoPoint):TGeoPoint;
+begin
+  //!!! tfw is not "x is lat and y is lng"
+  Result.lng := RadToDeg(coordxy.x / earth_radius);
+  Result.lat := RadToDeg(coordxy.y / earth_radius);
 end;
 
 

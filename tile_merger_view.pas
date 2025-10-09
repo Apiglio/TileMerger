@@ -1335,8 +1335,8 @@ begin
     tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
     AddProjectionInformationToGeoTIFF(FilenameWithoutExt);
     //GeoTiff里的exif信息要专门去写
-    lt:=tmpTile.LeftTop;
-    rb:=tmpTile.RightBottom;
+    lt:=CurrentTileMatrixSet.Projection.EncodeCoordinate(tmpTile.LeftTop);
+    rb:=CurrentTileMatrixSet.Projection.EncodeCoordinate(tmpTile.RightBottom);
     // A = (RB.x - LT.x) / vpwidth
     // B = 0
     // C = 0
