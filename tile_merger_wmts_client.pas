@@ -16,6 +16,19 @@ type
   TWMTS_TileMatrix = class;
   TWMTS_TileMatrixSet = class;
 
+  TWMTS_Options = class
+  protected
+    FNamedDimensions:TStringList;
+    FDefaultIndice:TStringList;
+  public
+    procedure AddValue(key,value:string;isDefault:boolean=false);
+    function GetValue(key:string;idx:integer):string;
+    function GetValueCount(key:string):integer;
+    procedure Clear;
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
   TWMTS_Layer = class
   private
     FTitle:String;
@@ -24,6 +37,9 @@ type
     FStyle:String;
     FURLTemplate:String;
     FService:TObject; //forward TWMTS_Service;
+    FBoundingBox:TGeoRectangle;
+    FDimension:TWMTS_Options;
+
   protected
     function GetTileExtent:string;
   public
@@ -33,6 +49,8 @@ type
     property TileExtent:string read GetTileExtent;
   public
     function URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
+    constructor Create;
+    destructor Destroy; override;
   end;
 
   TWMTS_TileMatrix = class
@@ -152,6 +170,72 @@ implementation
 uses tile_merger_view, math;
 
 
+{ TWMTS_Options }
+
+procedure TWMTS_Options.AddValue(key,value:string;isDefault:boolean=false);
+var idx:integer;
+    pDimension:TStringList;
+begin
+  if FNamedDimensions.Find(key, idx) then begin
+    pDimension:=TStringList(FNamedDimensions.Objects[idx]);
+  end else begin
+    pDimension:=TStringList.Create;
+    FNamedDimensions.AddObject(key, pDimension);
+    FDefaultIndice.AddObject(key, TObject(pint32(-1)));
+  end;
+  if pDimension.Find(value, idx) then begin
+    //
+  end else begin
+    idx:=pDimension.Add(value);
+  end;
+  if isDefault then FDefaultIndice.Objects[idx]:=TObject(pint32(idx));
+end;
+
+function TWMTS_Options.GetValue(key:string;idx:integer):string;
+var dim_idx:integer;
+begin
+  result:='';
+  if FNamedDimensions.Find(key, dim_idx) then begin
+    if (idx<0) or (idx>=dim_idx) then raise Exception.Create('invalid index: '+IntToStr(idx));
+    result:=TStringList(FNamedDimensions.Objects[dim_idx]).Strings[idx];
+  end else result:='';
+end;
+
+function TWMTS_Options.GetValueCount(key:string):integer;
+var idx:integer;
+begin
+  result:=0;
+  if FNamedDimensions.Find(key, idx) then result:=TStringList(FNamedDimensions.Objects[idx]).Count
+  else raise Exception.Create('No such key: '+key);
+end;
+
+procedure TWMTS_Options.Clear;
+var idx:integer;
+begin
+  for idx:=FNamedDimensions.Count-1 downto 0 do
+    TStringList(FNamedDimensions.Objects[idx]).Free;
+  FNamedDimensions.Clear;
+  FDefaultIndice.Clear;
+end;
+
+constructor TWMTS_Options.Create;
+begin
+  inherited Create;
+  FNamedDimensions:=TStringList.Create;
+  FNamedDimensions.Sorted:=true;
+  FDefaultIndice:=TStringList.Create;
+  FDefaultIndice.Sorted:=true;
+end;
+
+destructor TWMTS_Options.Destroy;
+begin
+  Clear;
+  FNamedDimensions.Free;
+  FDefaultIndice.Free;
+  inherited Destroy;
+end;
+
+
 { TWMTS_Layer }
 
 function TWMTS_Layer.GetTileExtent:string;
@@ -183,6 +267,18 @@ begin
   result:=StringReplace(result,'{Format}',FFormat,[rfIgnoreCase]);
   result:=StringReplace(result,'{Style}',FStyle,[rfIgnoreCase]);
 
+end;
+
+constructor TWMTS_Layer.Create;
+begin
+  inherited Create;
+  FDimension:=TWMTS_Options.Create;
+end;
+
+destructor TWMTS_Layer.Destroy;
+begin
+  FDimension.Free;
+  inherited Destroy;
 end;
 
 

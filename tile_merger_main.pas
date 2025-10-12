@@ -138,8 +138,8 @@ begin
     FTileViewer.AutoFetchTile:=true;
     FTileViewer.ForceFetchTile:=false;
   end else if Sender=MenuItem_DownloadModeForce then begin
-      FTileViewer.AutoFetchTile:=true;
-      FTileViewer.ForceFetchTile:=true;
+    FTileViewer.AutoFetchTile:=true;
+    FTileViewer.ForceFetchTile:=true;
   end else begin
     assert(false,'无效的菜单选项');
   end;
