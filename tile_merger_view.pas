@@ -71,19 +71,14 @@ type
   private
     FOnReady:TNotifyEvent;
     FTileViewer:TObject;
-  public
-    property OnReady:TNotifyEvent read FOnReady write FOnReady;
-  end;
-
-  TOnlineTile = class(TTile)
-  private
     FCachePath:String; //从TileViewPool中抄
   protected
     function GetCacheFileName:string;
   public
-    constructor CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer); reintroduce;
+    property OnReady:TNotifyEvent read FOnReady write FOnReady;
     property CacheFileName:string read GetCacheFileName;
   end;
+
 
   TTileViewerPool = class
   private
@@ -91,9 +86,9 @@ type
     FCachePath:String; // 网络下载的瓦片暂存位置
     PTileViewer:TObject;
   private
-    function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+    function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
   public
-    function GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+    function GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
     procedure Clear;
     property CachePath:String read FCachePath write FCachePath;
   public
@@ -107,7 +102,7 @@ type
 
   TFetchTileThread = class(TThread)
   private
-    PTile:TOnlineTile;
+    PTile:TTile;
     FUrl:String;
     FForceFetch:Boolean; //无论是否有缓存均下载瓦片并缓存（需要考虑线程竞争）
     FFetchResult:TFetchTileResult;
@@ -118,7 +113,7 @@ type
     procedure FetchDone;
     procedure Execute; override;
   public
-    constructor Create(aTile:TOnlineTile;aUrl:String;aForceFetch:Boolean);
+    constructor Create(aTile:TTile;aUrl:String;aForceFetch:Boolean);
   end;
 
   TTileViewer = class(TCustomControl)
@@ -382,6 +377,14 @@ begin
     end;
     else raise Exception.Create('不支持的图像格式：'+ALayer.Format);
   end;
+
+  //原TOnLineTile
+  Layer:=ALayer;
+  TileMatrix:=ATileMatrix;
+  Col:=ACol;
+  Row:=ARow;
+  FCachePath:='TilesCache';
+
 end;
 
 constructor TTile.CreateFromTiles(tiles:TList);
@@ -476,6 +479,18 @@ begin
   vRight:=r;
   vBottom:=b;
 end;
+
+function TTile.GetCacheFileName:string;
+begin
+  result:=FCachePath;
+  result:=result + DirectorySeparator + TileMatrix.Identifier;
+  result:=result + DirectorySeparator + IntToStr(Col);
+  result:=result + DirectorySeparator + IntToStr(Row);
+  result:=result + DirectorySeparator + TWMTS_Service(Layer.Service).Title;
+  result:=result + '#' + Layer.Title;
+  result:=result + '.' + Layer.TileExtent;
+end;
+
 
 { TFetchTileThread }
 
@@ -572,7 +587,7 @@ begin
   end;
 end;
 
-constructor TFetchTileThread.Create(aTile:TOnlineTile;aUrl:String;aForceFetch:Boolean);
+constructor TFetchTileThread.Create(aTile:TTile;aUrl:String;aForceFetch:Boolean);
 begin
   inherited Create(true);
   FUrl:=aUrl;
@@ -582,52 +597,35 @@ begin
 end;
 
 
-{ TOnlineTile }
-
-function TOnlineTile.GetCacheFileName:string;
-begin
-  result:=FCachePath;
-  result:=result + DirectorySeparator + TileMatrix.Identifier;
-  result:=result + DirectorySeparator + IntToStr(Col);
-  result:=result + DirectorySeparator + IntToStr(Row);
-  result:=result + DirectorySeparator + TWMTS_Service(Layer.Service).Title;
-  result:=result + '#' + Layer.Title;
-  result:=result + '.' + Layer.TileExtent;
-end;
-
-constructor TOnlineTile.CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer);
-begin
-  inherited CreateFromLayer(ATileViewer,ALayer,ATileMatrix,ARow,ACol);
-  Layer:=ALayer;
-  TileMatrix:=ATileMatrix;
-  Col:=ACol;
-  Row:=ARow;
-  FCachePath:='TilesCache';
-end;
-
 { TTileViewerPool }
 
-function TTileViewerPool.FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+function TTileViewerPool.FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
 var thread:TFetchTileThread;
+    canvas_point,cache_point:TGeoPoint;
 begin
-  result:=TOnlineTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
+  canvas_point.x:=aCol;
+  canvas_point.y:=aRow;
+  if not aTileMatrix.TileMatrixSet.Projection.NormalizeXY(canvas_point, cache_point) then exit;
+
+  result:=TTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
   result.FCachePath:=Self.FCachePath;
   thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,aRow,aCol),TTileViewer(PTileViewer).FForceFetchTile);
   thread.Start;
 end;
 
-function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TOnlineTile;
+function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
 label NEXT;
 var idx,len:integer;
-    tmpTile:TOnlineTile;
+    tmpTile:TTile;
 begin
   //想办法改一种访问更快的散列表
-  aRow:=(aRow+aTileMatrix.RowCount) mod aTileMatrix.RowCount;
-  aCol:=(aCol+aTileMatrix.ColumnCount) mod aTileMatrix.ColumnCount;
+  //因为像福建天地图历史影像这种图源会提供错误的MatrixWidth/Height，所以不再通过这个参数控制瓦片坐标超界
+  //aRow:=(aRow+aTileMatrix.RowCount) mod aTileMatrix.RowCount;
+  //aCol:=(aCol+aTileMatrix.ColumnCount) mod aTileMatrix.ColumnCount;
   len:=FTileList.Count;
   idx:=0;
   while idx<len do begin
-    tmpTile:=TOnlineTile(FTileList[idx]);
+    tmpTile:=TTile(FTileList[idx]);
     if aLayer<>tmpTile.Layer then goto NEXT;
     if aTileMatrix<>tmpTile.TileMatrix then goto NEXT;
     if aRow<>tmpTile.Row then goto NEXT;
@@ -641,18 +639,18 @@ begin
     FTileList.Add(result);
   end else begin
     if TTileViewer(PTileViewer).FForceFetchTile then begin
-      TOnlineTile(FTileList[idx]).Free;
+      TTile(FTileList[idx]).Free;
       result:=FetchTile(aLayer,aTileMatrix,aRow,aCol);
       FTileList[idx]:=result;
     end else
-      result:=TOnlineTile(FTileList[idx]);
+      result:=TTile(FTileList[idx]);
   end;
 end;
 
 procedure TTileViewerPool.Clear;
 begin
   while FTileList.Count>0 do begin
-    TOnlineTile(FTileList[0]).Free;
+    TTile(FTileList[0]).Free;
     FTileList.Delete(0);
   end;
 end;
@@ -1178,7 +1176,7 @@ end;
 procedure TTileViewer.Clear;
 begin
   while FTilePool.FTileList.Count>0 do begin
-    TOnlineTile(FTilePool.FTileList.Items[0]).Free;
+    TTile(FTilePool.FTileList.Items[0]).Free;
     FTilePool.FTileList.Delete(0);
   end;
 end;
@@ -1387,8 +1385,8 @@ begin
   end;
   if c1<0 then c1:=0;
   if r1<0 then r1:=0;
-  if c2>=bestTM.ColumnCount then c2:=bestTM.ColumnCount-1;
-  if r2>=bestTM.RowCount then r2:=bestTM.RowCount-1;
+  //if c2>=bestTM.ColumnCount then c2:=bestTM.ColumnCount-1;
+  //if r2>=bestTM.RowCount then r2:=bestTM.RowCount-1;
   for col:=c1 to c2 do begin
     for row:= r1 to r2 do begin
       TilePool.GetTile(CurrentLayer,bestTM,row,col);
@@ -1397,9 +1395,9 @@ begin
 end;
 
 procedure TTileViewer.TileThreadTerminate(Sender:TObject);
-var tmpTile:TOnlineTile;
+var tmpTile:TTile;
 begin
-  tmpTile:=Sender as TOnlineTile;
+  tmpTile:=Sender as TTile;
   if tmpTile.TileMatrix<>PBestTileMatrix then exit;
   PaintTile(tmpTile);
   PaintScale;

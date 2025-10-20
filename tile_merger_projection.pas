@@ -11,6 +11,7 @@ uses
 const
   default_ogc_mm_per_pixel = 0.00028;
   equator_circumference = 2*20037508.3427892;
+  semi_equator_circumference = 20037508.3427892;
   earth_radius = 6378137.0;
 
 type
@@ -57,6 +58,7 @@ type
       TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; virtual;
     function ScaleFactorByLatlong(latlong: TGeoPoint):Double; virtual;
     function ScaleFactorByXY(coordxy: TGeoPoint):Double; virtual;
+    function NormalizeXY(coordxy:TGeoPoint; out normalizedxy:TGeoPoint):boolean; virtual; //无法转为标准坐标时x和y均为nan
     class function CreateProjectionByText(urn_text:string):TProjection;
     constructor Create;
     property MetterPerPixel:TGeoCoord read FMetterPerPixel write FMetterPerPixel;
@@ -96,6 +98,7 @@ type
 
   operator +(ina,inb:TGeoPoint):TGeoPoint;
   operator -(ina,inb:TGeoPoint):TGeoPoint;
+  operator mod(ina,inb:TGeoCoord):TGeoCoord;
 
 implementation
 uses math;
@@ -112,6 +115,11 @@ begin
   result.y:=ina.y-inb.y;
 end;
 
+operator mod(ina, inb: TGeoCoord): TGeoCoord;
+begin
+  if inb=0 then raise Exception.Create('rem by zero')
+  else result:=ina-inb*trunc(ina/inb);
+end;
 
 { TGeoRectangle }
 
@@ -204,6 +212,18 @@ end;
 function TProjection.ScaleFactorByXY(coordxy: TGeoPoint):Double;
 begin
   result:=1.0; //默认的投影不计算长度形变
+end;
+
+function TProjection.NormalizeXY(coordxy:TGeoPoint; out normalizedxy:TGeoPoint):boolean;
+const semi_ec = semi_equator_circumference;
+      ec      = equator_circumference;
+begin
+  result:=true;
+  normalizedxy:=coordxy;
+  if normalizedxy.x >= +semi_ec then result.x := (normalizedxy.x+semi_ec) mod ec - semi_ec;
+  if normalizedxy.x <= -semi_ec then result.x := (normalizedxy.x-semi_ec) mod ec + semi_ec;
+  if normalizedxy.y >= +semi_ec then result := false;
+  if normalizedxy.y <= -semi_ec then result := false;
 end;
 
 { TEquirectangular }

@@ -76,6 +76,7 @@ type
     property RowCount:Int64 read FRowCount;
     property Identifier:String read FIdentifier;
     property MeterPerPixel:TGeoCoord read GetMeterPerPixel;
+    property TileMatrixSet:TWMTS_TileMatrixSet read FParent;
     property UserAgent:String read GetUserAgent;
   end;
 
@@ -183,11 +184,8 @@ begin
     FNamedDimensions.AddObject(key, pDimension);
     FDefaultIndice.AddObject(key, TObject(pint32(-1)));
   end;
-  if pDimension.Find(value, idx) then begin
-    //
-  end else begin
-    idx:=pDimension.Add(value);
-  end;
+  idx:=pDimension.Add(value);
+
   if isDefault then FDefaultIndice.Objects[idx]:=TObject(pint32(idx));
 end;
 
@@ -424,12 +422,12 @@ end;
 procedure TWMTS_Service.LoadFromManifestXml(aUrl:string; ServiceConfig:TWMTS_Service_Config);
 var manifest:TMemoryStream;
     xml:TXMLDocument;
-    node,content_node,tilematrix_node:TDOMNode;
+    node,content_node,tilematrix_node,tmp_node,tm2_node:TDOMNode;
     idx,len,mt_idx,mt_len,poss:integer;
     tmpLayer:TWMTS_Layer;
     tmpTileMatrix:TWMTS_TileMatrix;
     tmpTileMatrixSet:TWMTS_TileMatrixSet;
-    px,py,kvp_url:string;
+    px,py,kvp_url,dimension_id:string;
 begin
   manifest:=TMemoryStream.Create;
   try
@@ -488,6 +486,16 @@ begin
             tmpLayer.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;
             tmpLayer.FFormat:=content_node.FindNode('Format').FirstChild.NodeValue;
             tmpLayer.FStyle:=content_node.FindNode('Style').FindNode('ows:Identifier').FirstChild.NodeValue;
+            tmp_node:=nil;
+            tmp_node:=content_node.FindNode('Dimension');
+            if tmp_node<>nil then begin
+              dimension_id:=tmp_node.FindNode('ows:Identifier').FirstChild.NodeValue;
+              {dims}mt_len:=tmp_node.ChildNodes.Count;
+              for {dims}mt_idx:=0 to {dims}mt_len-1 do begin
+                tm2_node:=tmp_node.ChildNodes[{dims}mt_idx];
+                if tm2_node.NodeName='Value' then tmpLayer.FDimension.AddValue(dimension_id,tm2_node.FirstChild.NodeValue);
+              end;
+            end;
             if FKvpUrl='' then
               tmpLayer.FURLTemplate:=content_node.FindNode('ResourceURL').Attributes.GetNamedItem('template').NodeValue
             else
@@ -656,8 +664,20 @@ begin
   FServiceList.Add(tmpService);
 
 
+  //需要解决Time维度
+  tmpServiceConfig.url_replacement.old_pattern:='';
+  tmpServiceConfig.url_replacement.new_pattern:='';
+  tmpServiceConfig.token:='0e2c50def624b69b1dcb67f43f353c49';
+  tmpServiceConfig.fixed_meter_per_pixel:=0.0002803138; //没招了就这样吧
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/img_fj_2025_his/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+
+
   //https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts
   //http://s0.fjmap.net:80/img_fj_2019/wmts
+  //http://s0.fjmap.net/img_fj_2025_his/wmts
   //https://osmlab.github.io/wmts-osm/WMTSCapabilities.xml
   //https://ows.terrestris.de/osm/service?service=WMTS&request=GetCapabilities
   //https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml
