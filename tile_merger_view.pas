@@ -33,6 +33,7 @@ type
     FImageFormat:TTileFormat;
   protected
     function GetRightBottom:TGeoPoint;
+    function GetCentroid:TGeoPoint;
     function GetTileTop:Double;
     function GetTileLeft:Double;
     function GetTileRight:Double;
@@ -44,6 +45,7 @@ type
     procedure SetTileRange(ALeft,ATop,ARight,ABottom:Double);
     property LeftTop:TGeoPoint read FLeftTop;
     property RightBottom:TGeoPoint read GetRightBottom;
+    property Centroid:TGeoPoint read GetCentroid;
     property TileTop:Double read GetTileTop;
     property TileLeft:Double read GetTileLeft;
     property TileWidth:Double read GetTileWidth;
@@ -56,7 +58,8 @@ type
   public
     Layer:TWMTS_Layer;
     TileMatrix:TWMTS_TileMatrix;
-    Row,Col:Integer;
+    Row,Col:Integer;         //表示瓦片的显示坐标
+    normRow,normCol:Integer; //表示瓦片的URL和Cache用坐标
   public
     function GetCanvasPoint(wmct_xy:TGeoPoint):TPoint;
     function GetMercatorXY(canvas_point:TPoint):TGeoPoint;
@@ -273,6 +276,12 @@ begin
   result.y:=FLeftTop.y-FScaleY*Height*TileMatrix.MeterPerPixel;
 end;
 
+function TTile.GetCentroid:TGeoPoint;
+begin
+  result.x:=FLeftTop.x+(FScaleX*Width*TileMatrix.MeterPerPixel)/2.0;
+  result.y:=FLeftTop.y-(FScaleY*Height*TileMatrix.MeterPerPixel)/2.0;
+end;
+
 function TTile.GetTileTop:Double;
 begin
   result:=FLeftTop.y;
@@ -351,6 +360,7 @@ end;
 
 constructor TTile.CreateFromLayer(ATileViewer:TObject;ALayer:TWMTS_Layer;ATileMatrix:TWMTS_TileMatrix;ARow,ACol:Integer);
 var tmpTileViewer:TTileViewer;
+    normTileIndex:TTileIndex;
 begin
   inherited Create;
   tmpTileViewer:=ATileViewer as TTileViewer;
@@ -383,6 +393,13 @@ begin
   TileMatrix:=ATileMatrix;
   Col:=ACol;
   Row:=ARow;
+  normTileIndex:=ATileMatrix.TileMatrixSet.Projection.GetWMTSTileIndexNormalized(ATileMatrix.LeftTop, ATileMatrix.Scale, ATileMatrix.Width, ATileMatrix.Height, Centroid);
+  normCol:=normTileIndex.col;
+  normRow:=normTileIndex.row;
+  if (Col<>normCol) or (Row<>normRow) then begin
+    Form_Debug.AddMessage(Format('Col=%d nCol=%d  Row=%d nRow=%d',[Col,normCol,Row,normRow]));
+    sleep(10);
+  end;
   FCachePath:='TilesCache';
 
 end;
@@ -484,8 +501,8 @@ function TTile.GetCacheFileName:string;
 begin
   result:=FCachePath;
   result:=result + DirectorySeparator + TileMatrix.Identifier;
-  result:=result + DirectorySeparator + IntToStr(Col);
-  result:=result + DirectorySeparator + IntToStr(Row);
+  result:=result + DirectorySeparator + IntToStr(normCol);
+  result:=result + DirectorySeparator + IntToStr(normRow);
   result:=result + DirectorySeparator + TWMTS_Service(Layer.Service).Title;
   result:=result + '#' + Layer.Title;
   result:=result + '.' + Layer.TileExtent;
@@ -609,7 +626,8 @@ begin
 
   result:=TTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
   result.FCachePath:=Self.FCachePath;
-  thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,aRow,aCol),TTileViewer(PTileViewer).FForceFetchTile);
+
+  thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,result.normRow,result.normCol),TTileViewer(PTileViewer).FForceFetchTile);
   thread.Start;
 end;
 

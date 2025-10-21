@@ -56,6 +56,8 @@ type
       TileWidth,TileHeight,MatrixCol,MatrixRow:Integer):TGeoRectangle; virtual;
     function GetWMTSTileIndex(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
       TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; virtual;
+    function GetWMTSTileIndexNormalized(TopLeftCorner:TGeoPoint;ScaleDenominator:TGeoCoord;
+      TileWidth,TileHeight:Integer;Point:TGeoPoint):TTileIndex; virtual;
     function ScaleFactorByLatlong(latlong: TGeoPoint):Double; virtual;
     function ScaleFactorByXY(coordxy: TGeoPoint):Double; virtual;
     function NormalizeXY(coordxy:TGeoPoint; out normalizedxy:TGeoPoint):boolean; virtual; //无法转为标准坐标时x和y均为nan
@@ -113,6 +115,11 @@ operator -(ina,inb:TGeoPoint):TGeoPoint;
 begin
   result.x:=ina.x-inb.x;
   result.y:=ina.y-inb.y;
+end;
+
+operator =(ina,inb:TGeoPoint):boolean;
+begin
+  result:=(ina.x=inb.x) and (ina.y=inb.y);
 end;
 
 operator mod(ina, inb: TGeoCoord): TGeoCoord;
@@ -204,6 +211,25 @@ begin
   Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
 end;
 
+function TProjection.GetWMTSTileIndexNormalized(
+  TopLeftCorner: TGeoPoint; ScaleDenominator: TGeoCoord;
+  TileWidth, TileHeight: Integer; Point: TGeoPoint): TTileIndex;
+var
+  pixelSize, tileSpanX, tileSpanY: TGeoCoord;
+  normPoint: TGeoPoint;
+begin
+  pixelSize := ScaleDenominator * FMetterPerPixel;
+  tileSpanX := TileWidth  * pixelSize;
+  tileSpanY := TileHeight * pixelSize;
+
+  if not NormalizeXY(TopLeftCorner, normPoint) then begin
+    sleep(10);
+    normPoint := TopLeftCorner;
+  end;
+  Result.col := Floor((Point.x - TopLeftCorner.x) / tileSpanX);
+  Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
+end;
+
 function TProjection.ScaleFactorByLatlong(latlong: TGeoPoint):Double;
 begin
   result:=1.0; //默认的投影不计算长度形变
@@ -220,11 +246,15 @@ const semi_ec = semi_equator_circumference;
 begin
   result:=true;
   normalizedxy:=coordxy;
-  if normalizedxy.x >= +semi_ec then result.x := (normalizedxy.x+semi_ec) mod ec - semi_ec;
-  if normalizedxy.x <= -semi_ec then result.x := (normalizedxy.x-semi_ec) mod ec + semi_ec;
+  if normalizedxy.x >= +semi_ec then normalizedxy.x := (normalizedxy.x+semi_ec) mod ec - semi_ec;
+  if normalizedxy.x <= -semi_ec then normalizedxy.x := (normalizedxy.x-semi_ec) mod ec + semi_ec;
   if normalizedxy.y >= +semi_ec then result := false;
   if normalizedxy.y <= -semi_ec then result := false;
+  if normalizedxy<>coordxy then begin
+    sleep(10);
+  end;
 end;
+
 
 { TEquirectangular }
 
