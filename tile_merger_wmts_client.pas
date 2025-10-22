@@ -479,8 +479,6 @@ begin
         content_node:=node.ChildNodes[idx];
         case content_node.NodeName of
           'Layer':begin
-            //天地图格式差很多，要专门处理 http://s0.fjmap.net/img_fj_2019/wmts
-            //RESTful 和 KVP
             tmpLayer:=TWMTS_Layer.Create;
             tmpLayer.FTitle:=content_node.FindNode('ows:Title').FirstChild.NodeValue;
             tmpLayer.FIdentifier:=content_node.FindNode('ows:Identifier').FirstChild.NodeValue;

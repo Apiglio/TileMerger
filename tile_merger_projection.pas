@@ -100,6 +100,7 @@ type
 
   operator +(ina,inb:TGeoPoint):TGeoPoint;
   operator -(ina,inb:TGeoPoint):TGeoPoint;
+  operator =(ina,inb:TGeoPoint):Boolean;
   operator mod(ina,inb:TGeoCoord):TGeoCoord;
 
 implementation
@@ -117,7 +118,7 @@ begin
   result.y:=ina.y-inb.y;
 end;
 
-operator =(ina,inb:TGeoPoint):boolean;
+operator =(ina,inb:TGeoPoint):Boolean;
 begin
   result:=(ina.x=inb.x) and (ina.y=inb.y);
 end;
@@ -222,12 +223,13 @@ begin
   tileSpanX := TileWidth  * pixelSize;
   tileSpanY := TileHeight * pixelSize;
 
-  if not NormalizeXY(TopLeftCorner, normPoint) then begin
-    sleep(10);
-    normPoint := TopLeftCorner;
+  if not NormalizeXY(Point, normPoint) then begin
+    Result.col := -High(Integer);
+    Result.row := -High(Integer);
+  end else begin
+    Result.col := Floor((normPoint.x - TopLeftCorner.x) / tileSpanX);
+    Result.row := Floor((TopLeftCorner.y - normPoint.y) / tileSpanY);
   end;
-  Result.col := Floor((Point.x - TopLeftCorner.x) / tileSpanX);
-  Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
 end;
 
 function TProjection.ScaleFactorByLatlong(latlong: TGeoPoint):Double;
@@ -250,9 +252,6 @@ begin
   if normalizedxy.x <= -semi_ec then normalizedxy.x := (normalizedxy.x-semi_ec) mod ec + semi_ec;
   if normalizedxy.y >= +semi_ec then result := false;
   if normalizedxy.y <= -semi_ec then result := false;
-  if normalizedxy<>coordxy then begin
-    sleep(10);
-  end;
 end;
 
 

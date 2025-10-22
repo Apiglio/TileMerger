@@ -19,6 +19,8 @@ type
     constructor Create(value:double);
   end;
 
+  TPositionChangeEvent = procedure(Sender:TObject; Position:TGeoPoint; ScaleX, ScaleY:Double) of object;
+
   TTileFormat = (tfPNG, tfJPG, tfBMP);
 
   TTile = class
@@ -164,6 +166,7 @@ type
     property CachePath:string read GetCachePath;
   protected
     function GetRightBottom:TGeoPoint;
+    function GetCentroid:TGeoPoint;
     function GetCanvasTop:Double;
     function GetCanvasLeft:Double;
     function GetCanvasRight:Double;
@@ -179,6 +182,7 @@ type
   public
     property LeftTop:TGeoPoint read FLeftTop;
     property RightBottom:TGeoPoint read GetRightBottom;
+    property Centroid:TGeoPoint read GetCentroid;
     property CanvasTop:Double read GetCanvasTop write SetCanvasTop;
     property CanvasLeft:Double read GetCanvasLeft write SetCanvasLeft;
     property CanvasRight:Double read GetCanvasRight write SetCanvasRight;
@@ -205,6 +209,7 @@ type
     procedure Zoom(AOrigin:TGeoPoint;AScale:Double);
     procedure ZoomTo(AScale:Double);
     procedure ProportionCorrection;
+    procedure CoordinateCorrection;
     procedure PaintScale;
     procedure PaintInfo;
     procedure PaintStop;
@@ -213,9 +218,11 @@ type
   private
     FOnLayerChange:TNotifyEvent;
     FOnTileMatrixSetChange:TNotifyEvent;
+    FOnPositionChange:TPositionChangeEvent;
   public
     property OnLayerChange:TNotifyEvent read FOnLayerChange write FOnLayerChange;
     property OnTileMatrixSetChange:TNotifyEvent read FOnTileMatrixSetChange write FOnTileMatrixSetChange;
+    property OnPositionChange:TPositionChangeEvent read FOnPositionChange write FOnPositionChange;
   public
     procedure Clear; virtual;
     procedure Refresh;
@@ -370,8 +377,6 @@ begin
   FEnabled:=false;//加载线程结束后修改为true
   FPixelWidth:=ATileMatrix.Width;
   FPixelHeight:=ATileMatrix.Height;
-  //FLeftTop.x:=ATileMatrix.LeftTop.x+ACol*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Width);
-  //FLeftTop.y:=ATileMatrix.LeftTop.y-ARow*(ATileMatrix.Scale*ogc_mm_per_pixel*ATileMatrix.Height);
   FLeftTop:=ATileMatrix.GetTileRect(ACol,ARow).LeftTop;
   FScaleX:=ATileMatrix.Scale;
   FScaleY:=ATileMatrix.Scale;
@@ -396,10 +401,6 @@ begin
   normTileIndex:=ATileMatrix.TileMatrixSet.Projection.GetWMTSTileIndexNormalized(ATileMatrix.LeftTop, ATileMatrix.Scale, ATileMatrix.Width, ATileMatrix.Height, Centroid);
   normCol:=normTileIndex.col;
   normRow:=normTileIndex.row;
-  if (Col<>normCol) or (Row<>normRow) then begin
-    Form_Debug.AddMessage(Format('Col=%d nCol=%d  Row=%d nRow=%d',[Col,normCol,Row,normRow]));
-    sleep(10);
-  end;
   FCachePath:='TilesCache';
 
 end;
@@ -528,11 +529,11 @@ end;
 
 procedure TFetchTileThread.FetchInit;
 begin
-  //{
+  {
   with PTile do
-    Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%u Y:%u', [TileMatrix.Identifier, Col, Row]));
+    Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%d Y:%d nX:%d nY:%d', [TileMatrix.Identifier, Col, Row, normCol, normRow]));
   Form_Debug.AddMessage(FUrl);
-  //}
+  }
   FStartTime:=Now;
 end;
 
@@ -541,7 +542,7 @@ begin
   with PTile do
     Form_Debug.AddMessage(
       '['+DateTimeToStr(Now)+']  '+fetch_tile_result_to_str(FFetchResult)+'  '
-      +Format('T:%5.0fms L:%s X:%u Y:%u', [1000*86400*(Now-FStartTime),TileMatrix.Identifier, Col, Row])
+      +Format('T:%5.0fms L:%s X:%d Y:%d nX:%d nY:%d', [1000*86400*(Now-FStartTime),TileMatrix.Identifier, Col, Row, normCol, normRow])
     );
   if FFetchResult in [ftrCache, ftrSaved] then begin
     PTile.FEnabled:=true;
@@ -618,17 +619,15 @@ end;
 
 function TTileViewerPool.FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
 var thread:TFetchTileThread;
-    canvas_point,cache_point:TGeoPoint;
 begin
-  canvas_point.x:=aCol;
-  canvas_point.y:=aRow;
-  if not aTileMatrix.TileMatrixSet.Projection.NormalizeXY(canvas_point, cache_point) then exit;
-
   result:=TTile.CreateFromLayer(PTileViewer,aLayer,aTileMatrix,aRow,aCol);
   result.FCachePath:=Self.FCachePath;
-
-  thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix,result.normRow,result.normCol),TTileViewer(PTileViewer).FForceFetchTile);
-  thread.Start;
+  with result do if normCol>=0 then begin
+    thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix, normRow, normCol),TTileViewer(PTileViewer).FForceFetchTile);
+    thread.Start;
+  end else begin
+    //FEnabled:=true;
+  end;
 end;
 
 function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
@@ -764,6 +763,12 @@ begin
   result.y:=FLeftTop.y-FScaleY*Height*CurrentTileMatrixSet.MeterPerPixel;
 end;
 
+function TTileViewer.GetCentroid:TGeoPoint;
+begin
+  result.x:=FLeftTop.x+FScaleX*Width*CurrentTileMatrixSet.MeterPerPixel/2;
+  result.y:=FLeftTop.y-FScaleY*Height*CurrentTileMatrixSet.MeterPerPixel/2;
+end;
+
 function TTileViewer.GetCanvasTop:Double;
 begin
   result:=FLeftTop.y;
@@ -868,6 +873,7 @@ end;
 procedure TTileViewer.ViewResize(Sender:TObject);
 begin
   ProportionCorrection;
+  CoordinateCorrection;
   if FAutoFetchTile then ShowTiles;
   Paint;
 end;
@@ -921,6 +927,7 @@ begin
   offset.x:=CanvasWidth/2;
   offset.y:=-CanvasHeight/2;
   FLeftTop:=APoint-offset;
+  CoordinateCorrection;
   if FAutoFetchTile then ShowTiles;
 end;
 
@@ -936,6 +943,7 @@ begin
   FScaleX:=FScaleX*AScale;
   FScaleY:=FScaleY*AScale;
   if FCurrentTileMatrixSet<>nil then PBestTileMatrix:=FCurrentTileMatrixSet.BestFitTileMatrix(FScaleX);
+  CoordinateCorrection;
   if FAutoFetchTile then ShowTiles;
 end;
 
@@ -956,6 +964,17 @@ begin
   CanvasLeft:=ll;
   CanvasWidth:=ww;
   CanvasHeight:=hh;
+end;
+
+procedure TTileViewer.CoordinateCorrection;
+var c1,c2,center_offset:TGeoPoint;
+begin
+  c1:=Centroid;
+  center_offset.x:=CanvasWidth/2;
+  center_offset.y:=-CanvasHeight/2;
+  CurrentTileMatrixSet.Projection.NormalizeXY(c1, c2);
+  if c1<>c2 then FLeftTop:=c2-center_offset;
+  if FOnPositionChange<>nil then FOnPositionChange(Self, FLeftTop, FScaleX, FScaleY);
 end;
 
 function BestScaleDistance(max_scale:double):double;
@@ -1074,7 +1093,7 @@ var wmct_xy,wmct_lt,wmct_rb:TGeoPoint;
     latlong:TGeoPoint;
     tile_idx:TTileIndex;
     bestTM:TWMTS_TileMatrix;
-    prompt_cursor,prompt_view,wmct_cursor,wmct_view,BestTM_Name:string;
+    prompt_cursor,prompt_view,wmct_cursor,wmct_view:string;
     text_height,text_top,pw_cursor,pw_view,sw_cursor,sw_view,pl_view,sl_view:integer;
 begin
   if ShowInfo then begin
@@ -1401,8 +1420,8 @@ begin
     r1:=t2.row;
     r2:=t1.row;
   end;
-  if c1<0 then c1:=0;
-  if r1<0 then r1:=0;
+  //if c1<0 then c1:=0;
+  //if r1<0 then r1:=0;
   //if c2>=bestTM.ColumnCount then c2:=bestTM.ColumnCount-1;
   //if r2>=bestTM.RowCount then r2:=bestTM.RowCount-1;
   for col:=c1 to c2 do begin
