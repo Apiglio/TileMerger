@@ -127,6 +127,7 @@ type
     FToken:String;
     FKvpUrl:String;
     FUserAgent:String;
+    FDisplayName:String;
   protected
     function GetLayer(index:integer):TWMTS_Layer;
     function GetLayerCount:Integer;
@@ -141,6 +142,7 @@ type
     property Token:String read FToken;
     property KvpUrl:String read FKvpUrl;
     property UserAgent:String read FUserAgent write FUserAgent;
+    property DisplayName:String read FDisplayName write FDisplayName;
   public
     procedure LoadFromManifestXml(aUrl:string; ServiceConfig:TWMTS_Service_Config);
   public
@@ -449,6 +451,7 @@ begin
       node:=node.FindNode('ows:ServiceIdentification');
       node:=node.FindNode('ows:Title');
       FTitle:=node.FirstChild.NodeValue;
+      FDisplayName:=FTitle;
       node:=node.ParentNode;
       node:=node.FindNode('ows:ServiceTypeVersion');
       FVersion:=node.FirstChild.NodeValue;
@@ -643,7 +646,7 @@ begin
   tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts', tmpServiceConfig);
   FServiceList.Add(tmpService);
   tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
-
+  tmpService.DisplayName:='天地图福建 2019';
 
   tmpServiceConfig.url_replacement.old_pattern:='';
   tmpServiceConfig.url_replacement.new_pattern:='';
@@ -652,6 +655,7 @@ begin
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml('https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts', tmpServiceConfig);
   FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图全国';
 
   tmpServiceConfig.url_replacement.old_pattern:='';
   tmpServiceConfig.url_replacement.new_pattern:='';
@@ -660,6 +664,7 @@ begin
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml('https://ows.terrestris.de/osm/service?service=WMTS&request=GetCapabilities', tmpServiceConfig);
   FServiceList.Add(tmpService);
+  tmpService.DisplayName:='Open Street Map (terrestris.de)';
 
 
   //需要解决Time维度
@@ -671,6 +676,7 @@ begin
   tmpService.LoadFromManifestXml('http://s0.fjmap.net/img_fj_2025_his/wmts', tmpServiceConfig);
   FServiceList.Add(tmpService);
   tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+  tmpService.DisplayName:='天地图福建 2025';
 
 
   //https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts

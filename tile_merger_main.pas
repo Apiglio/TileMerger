@@ -98,7 +98,7 @@ begin
   len_server:=WMTS_Client.ServiceCount;
   for idx_server:=0 to len_server-1 do begin
     server:=WMTS_Client.Services[idx_server];
-    node:=TreeView_wmts_list.Items.AddChild(root,server.Title);
+    node:=TreeView_wmts_list.Items.AddChild(root,server.DisplayName);
     node.Data:=server;
     lyr:=TreeView_wmts_list.Items.AddChild(node,'数据图层');
     tms:=TreeView_wmts_list.Items.AddChild(node,'层级方案');
