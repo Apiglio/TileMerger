@@ -25,6 +25,9 @@ type
   TFormTileMerger = class(TForm)
     Label_export: TLabel;
     MainMenu_TileMerger: TMainMenu;
+    MenuItem_ViewShowScale: TMenuItem;
+    MenuItem_TV_ZoomToResolution: TMenuItem;
+    MenuItem_TV_Redownload: TMenuItem;
     MenuItem_DownloadDiv01: TMenuItem;
     MenuItem_DownloadExport: TMenuItem;
     MenuItem_ViewDiv01: TMenuItem;
@@ -32,7 +35,6 @@ type
     MenuItem_DownloadModeForce: TMenuItem;
     MenuItem_DownloadModeAuto: TMenuItem;
     MenuItem_DownloadModeManual: TMenuItem;
-    MenuItem_ServerToken: TMenuItem;
     MenuItem_ViewShowInfo: TMenuItem;
     MenuItem_ViewShowGrid: TMenuItem;
     MenuItem_OptionDiv_01: TMenuItem;
@@ -47,6 +49,7 @@ type
     MenuItem_ServerAdd: TMenuItem;
     MenuItem_Server: TMenuItem;
     Panel_viewer: TPanel;
+    PopupMenu_TileViewer: TPopupMenu;
     Splitter_MainV: TSplitter;
     StatusBar_TileMerger: TStatusBar;
     TreeView_wmts_list: TTreeView;
@@ -56,9 +59,12 @@ type
     procedure MenuItem_DownloadModeSwitchClick(Sender: TObject); //所有的MenuItem_DownloadMode*的OnClick都执行这个
     procedure MenuItem_OptionAboutClick(Sender: TObject);
     procedure MenuItem_OptionLogClick(Sender: TObject);
+    procedure MenuItem_TV_RedownloadClick(Sender: TObject);
+    procedure MenuItem_TV_ZoomToResolutionClick(Sender: TObject);
     procedure MenuItem_ViewAutoFetchClick(Sender: TObject);
     procedure MenuItem_ViewShowGridClick(Sender: TObject);
     procedure MenuItem_ViewShowInfoClick(Sender: TObject);
+    procedure MenuItem_ViewShowScaleClick(Sender: TObject);
     procedure TreeView_wmts_listSelectionChanged(Sender: TObject);
   private
     FTileViewer:TTileViewer;
@@ -71,7 +77,7 @@ var
   WMTS_Client:TWMTS_Client;
 
 implementation
-uses debugline, exporttiff;
+uses debugline, exporttiff, tile_merger_projection;
 
 {$R *.lfm}
 
@@ -155,6 +161,47 @@ begin
   Form_Debug.Show;
 end;
 
+//{$define MonoTile}
+procedure TFormTileMerger.MenuItem_TV_RedownloadClick(Sender: TObject);
+{$ifdef MonoTile}
+//暂时不实现单一瓦片操作
+var bestTM:TWMTS_TileMatrix;
+    tmpIndex:TTileIndex;
+    tmpRect:TGeoRectangle;
+begin
+  with FTileViewer.CurrentTileMatrixSet do begin
+    bestTM:=BestFitTileMatrix(FTileViewer.ScaleX);
+    with bestTM do begin
+      tmpIndex:=Projection.GetWMTSTileIndex(
+        LeftTop, Scale, Width, Height,
+        FTileViewer.CursorToLocation(PopupMenu_TileViewer.PopupPoint.X, PopupMenu_TileViewer.PopupPoint.Y)
+      );
+      tmpRect:=Projection.GetWMTSTileRect(
+        LeftTop, Scale, Width, Height,
+        tmpIndex.col, tmpIndex.row
+      );
+    end;
+  end;
+  FTileViewer.ShowTilesRange(tmpRect);
+end;
+{$else}
+var fft_stored:boolean;
+begin
+  fft_stored:=FTileViewer.ForceFetchTile;
+  FTileViewer.ForceFetchTile:=true;
+  FTileViewer.ShowTiles;
+  FTileViewer.ForceFetchTile:=fft_stored;
+end;
+{$endif}
+
+procedure TFormTileMerger.MenuItem_TV_ZoomToResolutionClick(Sender: TObject);
+var bestTM:TWMTS_TileMatrix;
+begin
+  bestTM:=FTileViewer.CurrentTileMatrixSet.BestFitTileMatrix(FTileViewer.ScaleX);
+  FTileViewer.ZoomTo(bestTM.Scale);
+  FTileViewer.Refresh;
+end;
+
 procedure TFormTileMerger.MenuItem_ViewAutoFetchClick(Sender: TObject);
 begin
   FTileViewer.AutoFetchTile:=not MenuItem_ViewAutoFetch.Checked;
@@ -172,6 +219,13 @@ procedure TFormTileMerger.MenuItem_ViewShowInfoClick(Sender: TObject);
 begin
   FTileViewer.ShowInfo:=not MenuItem_ViewShowInfo.Checked;
   MenuItem_ViewShowInfo.Checked:=FTileViewer.ShowInfo;
+  FTileViewer.Refresh;
+end;
+
+procedure TFormTileMerger.MenuItem_ViewShowScaleClick(Sender: TObject);
+begin
+  FTileViewer.ShowScale:=not MenuItem_ViewShowScale.Checked;
+  MenuItem_ViewShowScale.Checked:=FTileViewer.ShowScale;
   FTileViewer.Refresh;
 end;
 

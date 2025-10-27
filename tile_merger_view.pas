@@ -203,11 +203,13 @@ type
     function TileToCanvasRect(ATile:TTile):TRect;
     function CanvasCenter:TGeoPoint;
     procedure GetCanvasRange(out vLeft,vTop,vRight,vBottom:Double);
-    function CursorPoint(X,Y:Integer):TGeoPoint;
-    function LocatePoint(CoordX,CoordY:Double):TPoint;
+  public
+    function CursorToLocation(X,Y:Integer):TGeoPoint;
+    function LocationToCursor(CoordX,CoordY:Double):TPoint;
     procedure PanToPoint(APoint:TGeoPoint);
     procedure Zoom(AOrigin:TGeoPoint;AScale:Double);
     procedure ZoomTo(AScale:Double);
+  protected
     procedure ProportionCorrection;
     procedure CoordinateCorrection;
     procedure PaintScale;
@@ -229,6 +231,7 @@ type
     procedure ZoomToWorld; virtual;
     procedure SaveToGeoTiff(FilenameWithoutExt:String);
     procedure ShowTiles(AScale:Double=0); //从服务器加载瓦片数据，根据给定比例尺确定层级，比例尺小于等于0时根据地图比例尺自动选择最合适的层级
+    procedure ShowTilesRange(ARect:TGeoRectangle; AScale:Double=0);
   public
     procedure TileThreadTerminate(Sender:TObject);
   public
@@ -714,7 +717,7 @@ procedure TTileViewer.SetCurrentLayer(value:TWMTS_Layer);
 var OldServer:TWMTS_Service;
     OldCanvasLatLong:TGeoPoint;
 begin
-  OldCanvasLatLong:=CurrentTileMatrixSet.Projection.XYToLatlong(CursorPoint(Width div 2, Height div 2));
+  OldCanvasLatLong:=CurrentTileMatrixSet.Projection.XYToLatlong(CursorToLocation(Width div 2, Height div 2));
   if FCurrentLayer<>nil then OldServer:=FCurrentLayer.Service as TWMTS_Service;
   FCurrentLayer:=value;
   if FCurrentLayer.Service<>OldServer then begin
@@ -734,7 +737,7 @@ procedure TTileViewer.SetCurrentTileMatrixSet(value:TWMTS_TileMatrixSet);
 var OldServer:TWMTS_Service;
     OldCanvasLatLong:TGeoPoint;
 begin
-  OldCanvasLatLong:=CurrentTileMatrixSet.Projection.XYToLatlong(CursorPoint(Width div 2, Height div 2));
+  OldCanvasLatLong:=CurrentTileMatrixSet.Projection.XYToLatlong(CursorToLocation(Width div 2, Height div 2));
   if FCurrentTileMatrixSet<>nil then OldServer:=FCurrentTileMatrixSet.Service as TWMTS_Service;
   FCurrentTileMatrixSet:=value;
   if FCurrentTileMatrixSet.Service<>OldServer then begin
@@ -865,8 +868,8 @@ end;
 
 procedure TTileViewer.MouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 begin
-  if WheelDelta>0 then Zoom(CursorPoint(MousePos.X,MousePos.Y),0.8)
-  else Zoom(CursorPoint(MousePos.X,MousePos.Y),1.25);
+  if WheelDelta>0 then Zoom(CursorToLocation(MousePos.X,MousePos.Y),0.8)
+  else Zoom(CursorToLocation(MousePos.X,MousePos.Y),1.25);
   Paint;
 end;
 
@@ -909,13 +912,13 @@ begin
   TTile.GetWorldRange(FTilePool.FTileList,vLeft,vTop,vRight,vBottom);
 end;
 
-function TTileViewer.CursorPoint(X,Y:Integer):TGeoPoint;
+function TTileViewer.CursorToLocation(X,Y:Integer):TGeoPoint;
 begin
   result.x:=FLeftTop.x+CanvasWidth*X/Width;
   result.y:=FLeftTop.y-CanvasHeight*Y/Height;
 end;
 
-function TTileViewer.LocatePoint(CoordX,CoordY:Double):TPoint;
+function TTileViewer.LocationToCursor(CoordX,CoordY:Double):TPoint;
 begin
   result.X:=round(Width*(CoordX-FLeftTop.x)/CanvasWidth);
   result.Y:=round(Height*(FLeftTop.y-CoordY)/CanvasHeight);
@@ -1017,8 +1020,8 @@ begin
     sp1.y := sp1.y + Canvas.TextHeight('H');
     sp2.y := sp2.y - Canvas.TextHeight('H');
   end;
-  wm1   := CursorPoint(sp1.x, sp1.y);
-  wm2   := CursorPoint(sp2.x, sp2.y);
+  wm1   := CursorToLocation(sp1.x, sp1.y);
+  wm2   := CursorToLocation(sp2.x, sp2.y);
   cw    := wm2.x - wm1.x;
   ch    := wm1.y - wm2.y;
   if (wm1.y>=-MaxDouble) and (wm1.y<=MaxDouble) then begin
@@ -1031,13 +1034,13 @@ begin
     Canvas.Pen.Color := clWhite;
     Canvas.Pen.Width := 3;
     Canvas.Pen.Style := psSolid;
-    sp_tmp:=LocatePoint(wm_tmp.x, wm_tmp.y);
+    sp_tmp:=LocationToCursor(wm_tmp.x, wm_tmp.y);
     Canvas.Line(sp1, sp_tmp);
     Canvas.Line(sp1, sp1+Classes.Point(0,+3));
     Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,+3));
     Canvas.Pen.Color := clBlack;
     Canvas.Pen.Width := 1;
-    Canvas.Line(sp1, LocatePoint(wm_tmp.x, wm_tmp.y));
+    Canvas.Line(sp1, LocationToCursor(wm_tmp.x, wm_tmp.y));
     Canvas.Line(sp1, sp1+Classes.Point(0,+3));
     Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,+3));
 
@@ -1063,13 +1066,13 @@ begin
     Canvas.Pen.Color := clWhite;
     Canvas.Pen.Width := 3;
     Canvas.Pen.Style := psSolid;
-    sp_tmp:=LocatePoint(wm_tmp.x, wm_tmp.y);
+    sp_tmp:=LocationToCursor(wm_tmp.x, wm_tmp.y);
     Canvas.Line(sp2, sp_tmp);
     Canvas.Line(sp2, sp2+Classes.Point(0,-3));
     Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,-3));
     Canvas.Pen.Color := clBlack;
     Canvas.Pen.Width := 1;
-    Canvas.Line(sp2, LocatePoint(wm_tmp.x, wm_tmp.y));
+    Canvas.Line(sp2, LocationToCursor(wm_tmp.x, wm_tmp.y));
     Canvas.Line(sp2, sp2+Classes.Point(0,-3));
     Canvas.Line(sp_tmp, sp_tmp+Classes.Point(0,-3));
 
@@ -1097,7 +1100,7 @@ var wmct_xy,wmct_lt,wmct_rb:TGeoPoint;
     text_height,text_top,pw_cursor,pw_view,sw_cursor,sw_view,pl_view,sl_view:integer;
 begin
   if ShowInfo then begin
-    wmct_xy:=CursorPoint(FMouseCursor.X,FMouseCursor.Y);
+    wmct_xy:=CursorToLocation(FMouseCursor.X,FMouseCursor.Y);
     wmct_lt:=LeftTop;
     wmct_rb:=RightBottom;
     latlong:=CurrentTileMatrixSet.Projection.XYToLatlong(wmct_xy);
@@ -1420,10 +1423,39 @@ begin
     r1:=t2.row;
     r2:=t1.row;
   end;
-  //if c1<0 then c1:=0;
-  //if r1<0 then r1:=0;
-  //if c2>=bestTM.ColumnCount then c2:=bestTM.ColumnCount-1;
-  //if r2>=bestTM.RowCount then r2:=bestTM.RowCount-1;
+  for col:=c1 to c2 do begin
+    for row:= r1 to r2 do begin
+      TilePool.GetTile(CurrentLayer,bestTM,row,col);
+    end;
+  end;
+end;
+
+procedure TTileViewer.ShowTilesRange(ARect:TGeoRectangle; AScale:Double=0);
+var c1,c2,r1,r2,col,row:integer;
+    bestTM:TWMTS_TileMatrix;
+    t1,t2:TTileIndex;
+begin
+  //TilePool.Clear; //不清空了，所有瓦片都留在池内
+  if AScale<=0 then
+      bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX)
+  else
+      bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(AScale);
+  t1:=CurrentTileMatrixSet.Projection.GetWMTSTileIndex(bestTM.LeftTop,bestTM.Scale,bestTM.Width,bestTM.Height,ARect.LeftTop);
+  t2:=CurrentTileMatrixSet.Projection.GetWMTSTileIndex(bestTM.LeftTop,bestTM.Scale,bestTM.Width,bestTM.Height,ARect.RightBottom);
+  if t1.col<=t2.col then begin
+    c1:=t1.col;
+    c2:=t2.col;
+  end else begin
+    c1:=t2.col;
+    c2:=t1.col;
+  end;
+  if t1.row<=t2.row then begin
+    r1:=t1.row;
+    r2:=t2.row;
+  end else begin
+    r1:=t2.row;
+    r2:=t1.row;
+  end;
   for col:=c1 to c2 do begin
     for row:= r1 to r2 do begin
       TilePool.GetTile(CurrentLayer,bestTM,row,col);
