@@ -20,10 +20,14 @@ type
   protected
     FNamedDimensions:TStringList;
     FDefaultIndice:TStringList;
+    FOwnerLayer:TObject;// forward TWMTS_Layer;
   public
     procedure AddValue(key,value:string;isDefault:boolean=false);
     function GetValue(key:string;idx:integer):string;
     function GetValueCount(key:string):integer;
+    function GetKey(idx:integer):string;
+    function GetKeyCount:integer;
+    function GetDefaultIndex(const key:string):integer;
     procedure Clear;
     constructor Create;
     destructor Destroy; override;
@@ -47,6 +51,7 @@ type
     property Format:String read FFormat;
     property Service:TObject read FService;
     property TileExtent:string read GetTileExtent;
+    property Dimension:TWMTS_Options read FDimension;
   public
     function URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
     constructor Create;
@@ -186,17 +191,18 @@ begin
     FNamedDimensions.AddObject(key, pDimension);
     FDefaultIndice.AddObject(key, TObject(pint32(-1)));
   end;
-  idx:=pDimension.Add(value);
+  idx:=pDimension.AddObject(value, FOwnerLayer);
 
   if isDefault then FDefaultIndice.Objects[idx]:=TObject(pint32(idx));
 end;
 
 function TWMTS_Options.GetValue(key:string;idx:integer):string;
-var dim_idx:integer;
+var dim_idx,dim_len:integer;
 begin
   result:='';
   if FNamedDimensions.Find(key, dim_idx) then begin
-    if (idx<0) or (idx>=dim_idx) then raise Exception.Create('invalid index: '+IntToStr(idx));
+    dim_len:=TStringList(FNamedDimensions.Objects[dim_idx]).Count;
+    if (idx<0) or (idx>=dim_len) then raise Exception.Create('invalid index: '+IntToStr(idx));
     result:=TStringList(FNamedDimensions.Objects[dim_idx]).Strings[idx];
   end else result:='';
 end;
@@ -206,7 +212,31 @@ var idx:integer;
 begin
   result:=0;
   if FNamedDimensions.Find(key, idx) then result:=TStringList(FNamedDimensions.Objects[idx]).Count
-  else raise Exception.Create('No such key: '+key);
+  else raise Exception.CreateFmt('Invalid key index %d', [idx]);
+end;
+
+function TWMTS_Options.GetKey(idx:integer):string;
+begin
+  if (idx >= 0) and (idx < FNamedDimensions.Count) then
+    Result := FNamedDimensions[idx]
+  else
+    raise Exception.CreateFmt('Invalid key index %d', [idx]);
+end;
+
+function TWMTS_Options.GetKeyCount:integer;
+begin
+  Result := FNamedDimensions.Count;
+end;
+
+function TWMTS_Options.GetDefaultIndex(const key:string):integer;
+var
+  idxStr: String;
+begin
+  idxStr := FDefaultIndice.Values[Key];
+  if idxStr <> '' then
+    Result := StrToIntDef(idxStr, -1)
+  else
+    Result := -1;
 end;
 
 procedure TWMTS_Options.Clear;
@@ -273,6 +303,7 @@ constructor TWMTS_Layer.Create;
 begin
   inherited Create;
   FDimension:=TWMTS_Options.Create;
+  FDimension.FOwnerLayer:=Self;
 end;
 
 destructor TWMTS_Layer.Destroy;

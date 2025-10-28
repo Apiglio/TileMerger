@@ -84,11 +84,13 @@ uses debugline, exporttiff, tile_merger_projection;
 { TFormTileMerger }
 
 procedure TFormTileMerger.FormCreate(Sender: TObject);
-var root,node,lyr,tms:TTreeNode;
+var root,node,lyrs,tmss,layer:TTreeNode;
     server:TWMTS_Service;
     tmplayer:TWMTS_Layer;
     tmpTMS:TWMTS_TileMatrixSet;
     len,idx,len_server,idx_server:integer;
+    idx_opkey,idx_opvalue,len_opkey,len_opvalue:integer;
+    option_key,option_value:string;
 begin
   FTileViewer:=TTileViewer.Create(Self);
   FTileViewer.Parent:=Panel_viewer;
@@ -100,17 +102,27 @@ begin
     server:=WMTS_Client.Services[idx_server];
     node:=TreeView_wmts_list.Items.AddChild(root,server.DisplayName);
     node.Data:=server;
-    lyr:=TreeView_wmts_list.Items.AddChild(node,'数据图层');
-    tms:=TreeView_wmts_list.Items.AddChild(node,'层级方案');
+    lyrs:=TreeView_wmts_list.Items.AddChild(node,'数据图层');
+    tmss:=TreeView_wmts_list.Items.AddChild(node,'层级方案');
     len:=server.LayerCount;
     for idx:=0 to len-1 do begin
       tmplayer:=server.Layers[idx];
-      TreeView_wmts_list.Items.AddChild(lyr,tmplayer.Title).Data:=tmplayer;
+      layer:=TreeView_wmts_list.Items.AddChild(lyrs,tmplayer.Title);
+      layer.Data:=tmplayer;
+      len_opkey:=tmplayer.Dimension.GetKeyCount;
+      for idx_opkey:=0 to len_opkey-1 do begin
+        option_key:=tmplayer.Dimension.GetKey(idx_opkey);
+        len_opvalue:=tmplayer.Dimension.GetValueCount(option_key);
+        for idx_opvalue:=0 to len_opvalue-1 do begin
+          option_value:=tmplayer.Dimension.GetValue(option_key,idx_opvalue);
+          TreeView_wmts_list.Items.AddChild(layer,option_value);//.Data:=tmplayer.Dimension.;
+        end;
+      end;
     end;
     len:=server.TileMatrixSetCount;
     for idx:=0 to len-1 do begin
       tmpTMS:=server.TileMatrixSets[idx];
-      TreeView_wmts_list.Items.AddChild(tms,tmpTMS.Identifier).Data:=tmpTMS;
+      TreeView_wmts_list.Items.AddChild(tmss,tmpTMS.Identifier).Data:=tmpTMS;
     end;
   end;
   server:=WMTS_Client.Services[0];
