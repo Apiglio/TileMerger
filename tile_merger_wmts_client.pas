@@ -177,11 +177,13 @@ type
     function GetLayer(index:integer):TWMTS_Layer;
     function GetLayerCount:Integer;
     function GetTileMatrixSet(index:integer):TWMTS_TileMatrixSet;
+    function GetTileMatrixSetByName(idenifier:string):TWMTS_TileMatrixSet;
     function GetTileMatrixSetCount:Integer;
   public
     property Layers[index:integer]:TWMTS_Layer read GetLayer;
     property LayerCount:Integer read GetLayerCount;
     property TileMatrixSets[index:integer]:TWMTS_TileMatrixSet read GetTileMatrixSet;
+    property TileMatrixSetByName[idenifier:string]:TWMTS_TileMatrixSet read GetTileMatrixSetByName;
     property TileMatrixSetCount:Integer read GetTileMatrixSetCount;
     property Title:String read FTitle;
     property Token:String read FToken;
@@ -230,6 +232,7 @@ function TWMTS_ParameterValueList.Add(Value:String):TWMTS_ParameterValue;
 begin
   result:=Inherited Add as TWMTS_ParameterValue;
   result.FValue:=Value;
+  if Count=1 then Selected:=result;
 end;
 
 constructor TWMTS_ParameterValueList.Create(TheOwner:TWMTS_Parameter);
@@ -283,6 +286,7 @@ function TWMTS_ParameterList.Add(ParamterTitle:String):TWMTS_Parameter;
 begin
   result:=Inherited Add as TWMTS_Parameter;
   result.FTitle:=ParamterTitle;
+  if Count=1 then Selected:=result;
 end;
 
 constructor TWMTS_ParameterList.Create(TheOwner:TWMTS_Layer);
@@ -484,6 +488,17 @@ begin
   result:=TWMTS_TileMatrixSet(FTileMatrixSetList.Items[index]);
 end;
 
+function TWMTS_Service.GetTileMatrixSetByName(idenifier:string):TWMTS_TileMatrixSet;
+var idx,len:integer;
+begin
+  len:=FTileMatrixSetList.Count;
+  for idx:=0 to len-1 do begin
+    result:=TWMTS_TileMatrixSet(FTileMatrixSetList.Items[idx]);
+    if result.Identifier=idenifier then exit;
+  end;
+  result:=nil;
+end;
+
 function TWMTS_Service.GetTileMatrixSetCount:Integer;
 begin
   result:=FTileMatrixSetList.Count;
@@ -572,6 +587,15 @@ begin
             with ServiceConfig.url_replacement do
               if old_pattern<>'' then
                 tmpLayer.FURLTemplate:=tmpLayer.FURLTemplate.Replace(old_pattern, new_pattern);
+            //TileMatrixSetLink
+            {tmsl}mt_len:=content_node.ChildNodes.Count;
+            for {tmsl}mt_idx:=0 to {tmsl}mt_len-1 do begin
+              tmp_node:=content_node.ChildNodes[mt_idx];
+              if tmp_node.NodeName<>'TileMatrixSetLink' then continue;
+              tm2_node:=tmp_node.FindNode('TileMatrixSet');
+              if tm2_node=nil then continue;
+              tmpLayer.ParameterList.Parameter['TileMatrixSet'].Add(tm2_node.FirstChild.NodeValue);
+            end;
             tmpLayer.FService:=Self;
             FLayerList.Add(tmpLayer);
           end;
@@ -696,7 +720,7 @@ begin
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml(_wayback_, tmpServiceConfig);
   FServiceList.Add(tmpService);
-  {
+
   //需要解决Time维度
   tmpServiceConfig.url_replacement.old_pattern:='';
   tmpServiceConfig.url_replacement.new_pattern:='';
@@ -705,7 +729,7 @@ begin
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml', ServiceConfig_Default);
   FServiceList.Add(tmpService);
-  }
+
   tmpServiceConfig.url_replacement.old_pattern:='';
   tmpServiceConfig.url_replacement.new_pattern:='';
   tmpServiceConfig.token:='0e2c50def624b69b1dcb67f43f353c49';
@@ -723,6 +747,7 @@ begin
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml('https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts', tmpServiceConfig);
   FServiceList.Add(tmpService);
+  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
   tmpService.DisplayName:='天地图全国';
 
   tmpServiceConfig.url_replacement.old_pattern:='';

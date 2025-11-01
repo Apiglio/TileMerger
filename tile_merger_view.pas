@@ -532,11 +532,11 @@ end;
 
 procedure TFetchTileThread.FetchInit;
 begin
-  //{
+  {
   with PTile do
     Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%d Y:%d nX:%d nY:%d', [TileMatrix.Identifier, Col, Row, normCol, normRow]));
   Form_Debug.AddMessage(FUrl);
-  //}
+  }
   FStartTime:=Now;
 end;
 
@@ -716,14 +716,24 @@ end;
 procedure TTileViewer.SetCurrentLayer(value:TWMTS_Layer);
 var OldServer:TWMTS_Service;
     OldCanvasLatLong:TGeoPoint;
+    tmpParam:TWMTS_Parameter;
+    tmpValue:TWMTS_ParameterValue;
 begin
   OldCanvasLatLong:=CurrentTileMatrixSet.Projection.XYToLatlong(CursorToLocation(Width div 2, Height div 2));
   if FCurrentLayer<>nil then OldServer:=FCurrentLayer.Service as TWMTS_Service;
   FCurrentLayer:=value;
-  if FCurrentLayer.Service<>OldServer then begin
-    //修改Layer导致Server不同，则修改TileMatrixSet为新Server的第一个TileMatrixSet
-    FCurrentTileMatrixSet:=TWMTS_Service(FCurrentLayer.Service).TileMatrixSets[0];
+
+  //图层变更后总是修改为第一个TileMatrixSet
+  tmpParam:=FCurrentLayer.ParameterList['TileMatrixSet'];
+  if tmpParam=nil then begin
+    //原始的作法，可能出错（即：修改Layer导致Server不同，则修改TileMatrixSet为新Server的第一个TileMatrixSet）
+    CurrentTileMatrixSet:=TWMTS_Service(FCurrentLayer.Service).TileMatrixSets[0];
+  end else begin
+    tmpValue:=tmpParam.ValueList.Selected;
+    assert(tmpValue=nil, '没有tmpValue也就不会有tmpParam，没道理出现这个情况');
+    FCurrentTileMatrixSet:=TWMTS_Service(CurrentLayer.Service).TileMatrixSetByName[tmpValue.Value];
   end;
+
   if FOnLayerChange<>nil then FOnLayerChange(Self);
   if FAutoFetchTile then begin
     FTilePool.Clear;
