@@ -532,11 +532,11 @@ end;
 
 procedure TFetchTileThread.FetchInit;
 begin
-  {
+  //{
   with PTile do
     Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%d Y:%d nX:%d nY:%d', [TileMatrix.Identifier, Col, Row, normCol, normRow]));
   Form_Debug.AddMessage(FUrl);
-  }
+  //}
   FStartTime:=Now;
 end;
 

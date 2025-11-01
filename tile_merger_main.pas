@@ -89,8 +89,7 @@ var root,node,lyrs,tmss,layer:TTreeNode;
     tmplayer:TWMTS_Layer;
     tmpTMS:TWMTS_TileMatrixSet;
     len,idx,len_server,idx_server:integer;
-    idx_opkey,idx_opvalue,len_opkey,len_opvalue:integer;
-    option_key,option_value:string;
+    option_key,option_value:TCollectionItem;
 begin
   FTileViewer:=TTileViewer.Create(Self);
   FTileViewer.Parent:=Panel_viewer;
@@ -109,13 +108,10 @@ begin
       tmplayer:=server.Layers[idx];
       layer:=TreeView_wmts_list.Items.AddChild(lyrs,tmplayer.Title);
       layer.Data:=tmplayer;
-      len_opkey:=tmplayer.Dimension.GetKeyCount;
-      for idx_opkey:=0 to len_opkey-1 do begin
-        option_key:=tmplayer.Dimension.GetKey(idx_opkey);
-        len_opvalue:=tmplayer.Dimension.GetValueCount(option_key);
-        for idx_opvalue:=0 to len_opvalue-1 do begin
-          option_value:=tmplayer.Dimension.GetValue(option_key,idx_opvalue);
-          TreeView_wmts_list.Items.AddChild(layer,option_value);//.Data:=tmplayer.Dimension.;
+
+      for option_key in tmplayer.ParameterList do begin
+        for option_value in tmplayer.ParameterList[TWMTS_Parameter(option_key).Title].ValueList do begin
+          TreeView_wmts_list.Items.AddChild(layer,TWMTS_ParameterValue(option_value).Value).Data:=option_value;
         end;
       end;
     end;
@@ -205,6 +201,7 @@ begin
   FTileViewer.ForceFetchTile:=fft_stored;
 end;
 {$endif}
+{$undef MonoTile}
 
 procedure TFormTileMerger.MenuItem_TV_ZoomToResolutionClick(Sender: TObject);
 var bestTM:TWMTS_TileMatrix;
@@ -248,8 +245,9 @@ begin
   if DataObject=nil then exit;
   if DataObject is TWMTS_Layer then FTileViewer.CurrentLayer:=DataObject as TWMTS_Layer;
   if DataObject is TWMTS_TileMatrixSet then FTileViewer.CurrentTileMatrixSet:=DataObject as TWMTS_TileMatrixSet;
-  if FTileViewer.CurrentTileMatrixSet=nil then exit;
-  if FTileViewer.CurrentLayer=nil then exit;
+  if DataObject is TWMTS_ParameterValue then TWMTS_ParameterValue(DataObject).Owner.Selected:=TWMTS_ParameterValue(DataObject);
+  //if FTileViewer.CurrentTileMatrixSet=nil then exit;
+  //if FTileViewer.CurrentLayer=nil then exit;
 end;
 
 procedure TFormTileMerger.UpdateStatusBar(Sender: TObject);

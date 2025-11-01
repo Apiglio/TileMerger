@@ -15,22 +15,62 @@ type
 
   TWMTS_TileMatrix = class;
   TWMTS_TileMatrixSet = class;
+  TWMTS_Layer = class;
+  TWMTS_Parameter = class;
+  TWMTS_ParameterValue = class;
+  TWMTS_ParameterList = class;
+  TWMTS_ParameterValueList = class;
 
-  TWMTS_Options = class
+  TWMTS_ParameterValue = class(TCollectionItem)
+  private
+    FValue:String;
   protected
-    FNamedDimensions:TStringList;
-    FDefaultIndice:TStringList;
-    FOwnerLayer:TObject;// forward TWMTS_Layer;
+    function GetOwner:TWMTS_ParameterValueList;
   public
-    procedure AddValue(key,value:string;isDefault:boolean=false);
-    function GetValue(key:string;idx:integer):string;
-    function GetValueCount(key:string):integer;
-    function GetKey(idx:integer):string;
-    function GetKeyCount:integer;
-    function GetDefaultIndex(const key:string):integer;
-    procedure Clear;
-    constructor Create;
+    property Value:String read FValue write FValue;
+    property Owner:TWMTS_ParameterValueList read GetOwner;
+  end;
+
+  TWMTS_ParameterValueList = class(TCollection)
+  private
+    FOwner:TWMTS_Parameter;
+    FSelected:TWMTS_ParameterValue;
+  public
+    function Add(Value:String):TWMTS_ParameterValue;
+    constructor Create(TheOwner:TWMTS_Parameter);
+    property Selected:TWMTS_ParameterValue read FSelected write FSelected;
+    property Owner:TWMTS_Parameter read FOwner;
+  end;
+
+  TWMTS_Parameter = class(TCollectionItem)
+  private
+    FTitle:String;
+    FValueList:TWMTS_ParameterValueList;
+  protected
+    function GetOwner:TWMTS_ParameterList;
+  public
+    function Add(Value:String):TWMTS_ParameterValue;
+    constructor Create(ACollection: TCollection); override;
     destructor Destroy; override;
+    property Title:String read FTitle write FTitle;
+    property ValueList:TWMTS_ParameterValueList read FValueList;
+    property Owner:TWMTS_ParameterList read GetOwner;
+  end;
+
+  TWMTS_ParameterList = class(TCollection)
+  private
+    FOwner:TWMTS_Layer;
+    FSelected:TWMTS_Parameter;
+  protected
+    function AddParameterIfNotExist(ParameterTitle:String):TWMTS_Parameter;
+  public
+    function Add(ParamterTitle:String):TWMTS_Parameter;
+    constructor Create(TheOwner:TWMTS_Layer);
+    property Parameter[ParameterTitle:String]:TWMTS_Parameter read AddParameterIfNotExist; default;
+    property Selected:TWMTS_Parameter read FSelected write FSelected;
+    property Owner:TWMTS_Layer read FOwner;
+  public
+    function GetURLParameter:string;
   end;
 
   TWMTS_Layer = class
@@ -42,7 +82,7 @@ type
     FURLTemplate:String;
     FService:TObject; //forward TWMTS_Service;
     FBoundingBox:TGeoRectangle;
-    FDimension:TWMTS_Options;
+    FParameterList:TWMTS_ParameterList;
 
   protected
     function GetTileExtent:string;
@@ -51,7 +91,7 @@ type
     property Format:String read FFormat;
     property Service:TObject read FService;
     property TileExtent:string read GetTileExtent;
-    property Dimension:TWMTS_Options read FDimension;
+    property ParameterList:TWMTS_ParameterList read FParameterList;
   public
     function URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
     constructor Create;
@@ -177,94 +217,92 @@ var
 implementation
 uses tile_merger_view, math;
 
+{ TWMTS_ParameterValue }
 
-{ TWMTS_Options }
-
-procedure TWMTS_Options.AddValue(key,value:string;isDefault:boolean=false);
-var idx:integer;
-    pDimension:TStringList;
+function TWMTS_ParameterValue.GetOwner:TWMTS_ParameterValueList;
 begin
-  if FNamedDimensions.Find(key, idx) then begin
-    pDimension:=TStringList(FNamedDimensions.Objects[idx]);
-  end else begin
-    pDimension:=TStringList.Create;
-    FNamedDimensions.AddObject(key, pDimension);
-    FDefaultIndice.AddObject(key, TObject(pint32(-1)));
-  end;
-  idx:=pDimension.AddObject(value, FOwnerLayer);
-
-  if isDefault then FDefaultIndice.Objects[idx]:=TObject(pint32(idx));
+  result:=Collection as TWMTS_ParameterValueList;
 end;
 
-function TWMTS_Options.GetValue(key:string;idx:integer):string;
-var dim_idx,dim_len:integer;
+{ TWMTS_ParameterValueList }
+
+function TWMTS_ParameterValueList.Add(Value:String):TWMTS_ParameterValue;
 begin
-  result:='';
-  if FNamedDimensions.Find(key, dim_idx) then begin
-    dim_len:=TStringList(FNamedDimensions.Objects[dim_idx]).Count;
-    if (idx<0) or (idx>=dim_len) then raise Exception.Create('invalid index: '+IntToStr(idx));
-    result:=TStringList(FNamedDimensions.Objects[dim_idx]).Strings[idx];
-  end else result:='';
+  result:=Inherited Add as TWMTS_ParameterValue;
+  result.FValue:=Value;
 end;
 
-function TWMTS_Options.GetValueCount(key:string):integer;
-var idx:integer;
+constructor TWMTS_ParameterValueList.Create(TheOwner:TWMTS_Parameter);
 begin
-  result:=0;
-  if FNamedDimensions.Find(key, idx) then result:=TStringList(FNamedDimensions.Objects[idx]).Count
-  else raise Exception.CreateFmt('Invalid key index %d', [idx]);
+  inherited Create(TWMTS_ParameterValue);
+  FOwner:=TheOwner;
+  FSelected:=nil;
 end;
 
-function TWMTS_Options.GetKey(idx:integer):string;
+
+{ TWMTS_Parameter }
+
+function TWMTS_Parameter.GetOwner:TWMTS_ParameterList;
 begin
-  if (idx >= 0) and (idx < FNamedDimensions.Count) then
-    Result := FNamedDimensions[idx]
-  else
-    raise Exception.CreateFmt('Invalid key index %d', [idx]);
+  result:=Collection as TWMTS_ParameterList;
 end;
 
-function TWMTS_Options.GetKeyCount:integer;
+function TWMTS_Parameter.Add(Value:String):TWMTS_ParameterValue;
 begin
-  Result := FNamedDimensions.Count;
+  result:=FValueList.Add(Value);
 end;
 
-function TWMTS_Options.GetDefaultIndex(const key:string):integer;
-var
-  idxStr: String;
+constructor TWMTS_Parameter.Create(ACollection: TCollection);
 begin
-  idxStr := FDefaultIndice.Values[Key];
-  if idxStr <> '' then
-    Result := StrToIntDef(idxStr, -1)
-  else
-    Result := -1;
+  inherited Create(ACollection);
+  FValueList:=TWMTS_ParameterValueList.Create(Self);
 end;
 
-procedure TWMTS_Options.Clear;
-var idx:integer;
+destructor TWMTS_Parameter.Destroy;
 begin
-  for idx:=FNamedDimensions.Count-1 downto 0 do
-    TStringList(FNamedDimensions.Objects[idx]).Free;
-  FNamedDimensions.Clear;
-  FDefaultIndice.Clear;
-end;
-
-constructor TWMTS_Options.Create;
-begin
-  inherited Create;
-  FNamedDimensions:=TStringList.Create;
-  FNamedDimensions.Sorted:=true;
-  FDefaultIndice:=TStringList.Create;
-  FDefaultIndice.Sorted:=true;
-end;
-
-destructor TWMTS_Options.Destroy;
-begin
-  Clear;
-  FNamedDimensions.Free;
-  FDefaultIndice.Free;
+  FValueList.Free;
   inherited Destroy;
 end;
 
+
+{TWMTS_ParameterList}
+
+function TWMTS_ParameterList.AddParameterIfNotExist(ParameterTitle:String):TWMTS_Parameter;
+var tmpP:TCollectionItem;
+begin
+  for tmpP in Self do begin
+    if TWMTS_Parameter(tmpP).FTitle = ParameterTitle then begin
+      result:=TWMTS_Parameter(tmpP);
+      exit;
+    end;
+  end;
+  result:=Add(ParameterTitle);
+end;
+
+function TWMTS_ParameterList.Add(ParamterTitle:String):TWMTS_Parameter;
+begin
+  result:=Inherited Add as TWMTS_Parameter;
+  result.FTitle:=ParamterTitle;
+end;
+
+constructor TWMTS_ParameterList.Create(TheOwner:TWMTS_Layer);
+begin
+  inherited Create(TWMTS_Parameter);
+  FOwner:=TheOwner;
+  FSelected:=nil;
+end;
+
+function TWMTS_ParameterList.GetURLParameter:string;
+var tmpP:TCollectionItem;
+    tmpV:TWMTS_ParameterValue;
+begin
+  result:='';
+  for tmpP in Self do begin
+    tmpV:=TWMTS_Parameter(tmpP).FValueList.Selected;
+    if tmpV=nil then continue;
+    result:=Format('&%s=%s',[tmpV.Owner.Owner.Title,tmpV.Value]);
+  end;
+end;
 
 { TWMTS_Layer }
 
@@ -296,19 +334,18 @@ begin
   result:=StringReplace(result,'{Version}',TWMTS_Service(FService).FVersion,[rfIgnoreCase]);
   result:=StringReplace(result,'{Format}',FFormat,[rfIgnoreCase]);
   result:=StringReplace(result,'{Style}',FStyle,[rfIgnoreCase]);
-
+  result:=result+ParameterList.GetURLParameter;
 end;
 
 constructor TWMTS_Layer.Create;
 begin
   inherited Create;
-  FDimension:=TWMTS_Options.Create;
-  FDimension.FOwnerLayer:=Self;
+  FParameterList:=TWMTS_ParameterList.Create(Self);
 end;
 
 destructor TWMTS_Layer.Destroy;
 begin
-  FDimension.Free;
+  FParameterList.Free;
   inherited Destroy;
 end;
 
@@ -525,7 +562,7 @@ begin
               {dims}mt_len:=tmp_node.ChildNodes.Count;
               for {dims}mt_idx:=0 to {dims}mt_len-1 do begin
                 tm2_node:=tmp_node.ChildNodes[{dims}mt_idx];
-                if tm2_node.NodeName='Value' then tmpLayer.FDimension.AddValue(dimension_id,tm2_node.FirstChild.NodeValue);
+                if tm2_node.NodeName='Value' then tmpLayer.FParameterList.Parameter[dimension_id].Add(tm2_node.FirstChild.NodeValue);
               end;
             end;
             if FKvpUrl='' then
