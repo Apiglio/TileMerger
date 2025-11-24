@@ -502,13 +502,20 @@ begin
 end;
 
 function TTile.GetCacheFileName:string;
+var options_str,layer_str:string;
 begin
   result:=FCachePath;
+  result:=result + DirectorySeparator + (Layer.Service as TWMTS_Service).DisplayName; //使用Title天地图会重名
   result:=result + DirectorySeparator + TileMatrix.Identifier;
   result:=result + DirectorySeparator + IntToStr(normCol);
   result:=result + DirectorySeparator + IntToStr(normRow);
-  result:=result + DirectorySeparator + TWMTS_Service(Layer.Service).Title;
-  result:=result + '#' + Layer.Title;
+  layer_str := StringReplace(Layer.Title,':','_',[rfReplaceAll]);
+  layer_str := StringReplace(layer_str,'/','_',[rfReplaceAll]);
+  layer_str := StringReplace(layer_str,'\','_',[rfReplaceAll]);
+
+  result:=result + DirectorySeparator + layer_str;
+  options_str := Layer.ParameterList.GetPathNameParameter;
+  if options_str<> '' then result:=result + '#' + options_str;
   result:=result + '.' + Layer.TileExtent;
 end;
 
@@ -532,11 +539,11 @@ end;
 
 procedure TFetchTileThread.FetchInit;
 begin
-  {
+  //{
   with PTile do
     Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%d Y:%d nX:%d nY:%d', [TileMatrix.Identifier, Col, Row, normCol, normRow]));
   Form_Debug.AddMessage(FUrl);
-  }
+  //}
   FStartTime:=Now;
 end;
 

@@ -22,13 +22,16 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="2">
+    <RequiredPackages Count="3">
       <Item1>
-        <PackageName Value="LazControls"/>
+        <PackageName Value="acl_calendarflow"/>
       </Item1>
       <Item2>
-        <PackageName Value="LCL"/>
+        <PackageName Value="LazControls"/>
       </Item2>
+      <Item3>
+        <PackageName Value="LCL"/>
+      </Item3>
     </RequiredPackages>
     <Units Count="10">
       <Unit0>
@@ -102,7 +105,7 @@
     </Linking>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="7">
+    <Exceptions Count="8">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -124,6 +127,9 @@
       <Item7>
         <Name Value="ESocketError"/>
       </Item7>
+      <Item8>
+        <Name Value="EFCreateError"/>
+      </Item8>
     </Exceptions>
   </Debugging>
 </CONFIG>

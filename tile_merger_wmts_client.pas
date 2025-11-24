@@ -71,6 +71,7 @@ type
     property Owner:TWMTS_Layer read FOwner;
   public
     function GetURLParameter:string;
+    function GetPathNameParameter:string;
   end;
 
   TWMTS_Layer = class
@@ -83,15 +84,24 @@ type
     FService:TObject; //forward TWMTS_Service;
     FBoundingBox:TGeoRectangle;
     FParameterList:TWMTS_ParameterList;
+    FTimeTags:array of TDateTime; //only for RESTful ISO8601 time option
+    FTimeTagSelected:TDateTime;   //copy from the FTimesTags
+    FUsingISO8601:Boolean;
 
   protected
     function GetTileExtent:string;
+    function GetTimeTag(index:integer):TDateTime;
+    function GetTimeTagCount:integer;
   public
     property Title:String read FTitle;
     property Format:String read FFormat;
     property Service:TObject read FService;
     property TileExtent:string read GetTileExtent;
     property ParameterList:TWMTS_ParameterList read FParameterList;
+    property TimeTag[index:integer]:TDateTime read GetTimeTag;
+    property TimeTagCount:Integer read GetTimeTagCount;
+    property TimeTagSelected:TDateTime read FTimeTagSelected write FTimeTagSelected;
+    property UsingISO8601:boolean read FUsingISO8601 write FUsingISO8601;
   public
     function URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
     constructor Create;
@@ -213,11 +223,151 @@ type
     destructor Destroy; override;
   end;
 
+
 var
   ServiceConfig_Default:TWMTS_Service_Config;
 
 implementation
-uses tile_merger_view, math;
+uses tile_merger_view, math, dateutils;
+
+function DateTimeToISO8601(dt:TDateTime):string;
+begin
+  result:=Format('%.4d-%.2d-%0.2dT%.2d:%.2d:%.2dZ',[YearOf(dt),MonthOf(dt),DayOf(dt),HourOf(dt),MinuteOf(dt),SecondOf(dt)]);
+end;
+
+function ISO8601ToDateTime(iso:string):TDateTime;
+var dat,tim,yr,mt,dy,hr,mi,se:string;
+    len:integer;
+begin
+  result:=0.0;
+  //yyyy-mm-ddThh:mm:ssZ
+  //yyyy-mm-dd
+  len:=length(iso);
+  if len=20 then begin
+    tim:=iso;
+    dat:=iso;
+    Delete(tim,20,1);
+    Delete(tim,1,11);
+    Delete(dat,11,10);
+    hr:=tim;
+    mi:=tim;
+    se:=tim;
+    Delete(hr,3,7);
+    Delete(mi,6,3);
+    Delete(mi,1,3);
+    Delete(se,1,6);
+  end else if len=10 then begin
+    dat:=iso;
+    hr:='00';
+    mi:='00';
+    se:='00';
+  end else begin
+    exit;
+  end;
+  yr:=iso;
+  mt:=iso;
+  dy:=iso;
+  Delete(yr,5,6+10);
+  Delete(mt,8,3+10);
+  Delete(mt,1,5);
+  Delete(dy,11,10);
+  Delete(dy,1,8);
+  result:=dateutils.EncodeDateTime(StrToInt(yr),StrToInt(mt),StrToInt(dy),StrToInt(hr),StrToInt(mi),StrToInt(se),0);
+
+end;
+
+function ISORepeatingIntervalFindFirst(const ri:string; var dt1, dt2:TDateTime; var interval:string):boolean;
+var st1,st2:string;
+    t_pos:integer;
+begin
+  result:=false;
+  t_pos:=pos('/',ri);
+  if t_pos<=0 then exit;
+  st1:=ri;
+  delete(st1,t_pos,length(st1));
+  st2:=ri;
+  delete(st2,1,t_pos);
+  t_pos:=pos('/',st2);
+  if t_pos<=0 then exit;
+  interval:=st2;
+  delete(st2,t_pos,length(st2));
+  delete(interval,1,t_pos);
+  dt1:=ISO8601ToDateTime(st1);
+  dt2:=ISO8601ToDateTime(st2);
+  result:=true;
+end;
+
+{
+function ISORepeatingIntervalFindNext(var current:TDateTime; const endUpWith:TDateTime; const interval:string):boolean;
+var interval_str:string;
+    NextDateTime:TDateTime;
+begin
+  result:=false;
+  interval_str:=UpperCase(interval);
+  if interval_str[1]<>'P' then exit else delete(interval_str,1,1);
+  if interval_str[1]='T' then begin
+    //...
+  end else begin
+    //...
+  end;
+end;
+}
+
+function ISORepeatingIntervalFindNext( var current:TDateTime; const endUpWith:TDateTime; const interval:string):boolean;
+var s,datepart,timepart:string;
+    years,months,days,hours,mins,secs:integer;
+    function ExtractNumber(var s:string;ident:char):integer;
+    var p:integer; tmp:string;
+    begin
+      p := Pos(ident, s);
+      if p=0 then Exit(0);
+      // extract number before ident
+      tmp := Copy(s,1,p-1);
+      Delete(s,1,p);
+      Result := StrToIntDef(tmp, 0);
+    end;
+begin
+  Result := False;
+  s := UpperCase(interval);
+  if (s='') or (s[1]<>'P') then Exit;
+  Delete(s,1,1); // remove P
+  years := 0; months := 0; days := 0;
+  hours := 0; mins := 0; secs := 0;
+
+  // Date part first
+  if Pos('T', s) > 0 then begin
+    // date part
+    datepart := s;
+    timepart := s;
+    Delete(datepart, Pos('T', datepart), Length(datepart));
+    Delete(timepart, 1, Pos('T', timepart));
+    s := datepart;
+    years  := ExtractNumber(s,'Y');
+    months := ExtractNumber(s,'M');
+    days   := ExtractNumber(s,'D');
+    // time part
+    s := timepart;
+    Delete(s,1,0); // s starts with 'T', but we removed earlier
+    hours := ExtractNumber(s,'H');
+    mins  := ExtractNumber(s,'M');
+    secs  := ExtractNumber(s,'S');
+  end else begin
+    // Only date part
+    years  := ExtractNumber(s,'Y');
+    months := ExtractNumber(s,'M');
+    days   := ExtractNumber(s,'D');
+  end;
+  // Apply increments
+  current := IncYear(current, years);
+  current := IncMonth(current, months);
+  current := IncDay(current, days);
+  current := IncHour(current, hours);
+  current := IncMinute(current, mins);
+  current := IncSecond(current, secs);
+  // check if past end
+  if current > endUpWith then Exit;
+  Result := True;
+end;
 
 { TWMTS_ParameterValue }
 
@@ -303,9 +453,32 @@ begin
   result:='';
   for tmpP in Self do begin
     tmpV:=TWMTS_Parameter(tmpP).FValueList.Selected;
+    if tmpV.Owner.Owner.Title='TileMatrixSet' then continue; //TMS暂时还是用老方法
     if tmpV=nil then continue;
-    result:=Format('&%s=%s',[tmpV.Owner.Owner.Title,tmpV.Value]);
+    result:=result+Format('&%s=%s',[tmpV.Owner.Owner.Title,StringReplace(tmpV.Value,' ','%20',[rfReplaceAll])]);
   end;
+end;
+
+function TWMTS_ParameterList.GetPathNameParameter:string;
+var tmpP:TCollectionItem;
+    tmpV:TWMTS_ParameterValue;
+    tmpLayer:TWMTS_Layer;
+begin
+  result:='';
+  for tmpP in Self do begin
+    tmpV:=TWMTS_Parameter(tmpP).FValueList.Selected;
+    tmpLayer:=tmpV.Owner.Owner.Owner.Owner; //that's ridiculously ugly
+    if tmpV.Owner.Owner.Title='TileMatrixSet' then continue; //TMS暂时还是用老方法
+    if tmpV.Owner.Owner.Title='Time' then begin
+      if tmpLayer.UsingISO8601 then begin
+        result:=result+Format('&%s=%s',[tmpV.Owner.Owner.Title,DateTimeToISO8601(tmpLayer.TimeTagSelected)]);
+        continue;
+      end;
+    end;
+    if tmpV=nil then continue;
+    result:=result+Format('&%s=%s',[tmpV.Owner.Owner.Title,tmpV.Value]);
+  end;
+  result:=StringReplace(result,':','_',[rfReplaceAll]);
 end;
 
 { TWMTS_Layer }
@@ -325,6 +498,16 @@ begin
     else result:='dat';
   end;
 end;
+function TWMTS_Layer.GetTimeTag(index:integer):TDateTime;
+begin
+  if (index<0) or (index>=Length(FTimeTags)) then result:=0
+  else result:=FTimeTags[index];
+end;
+
+function TWMTS_Layer.GetTimeTagCount:integer;
+begin
+  result:=Length(FTimeTags);
+end;
 
 function TWMTS_Layer.URL(aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):string;
 begin
@@ -338,17 +521,24 @@ begin
   result:=StringReplace(result,'{Version}',TWMTS_Service(FService).FVersion,[rfIgnoreCase]);
   result:=StringReplace(result,'{Format}',FFormat,[rfIgnoreCase]);
   result:=StringReplace(result,'{Style}',FStyle,[rfIgnoreCase]);
-  result:=result+ParameterList.GetURLParameter;
+  if pos('{time}',lowercase(result))>=0 then begin
+    result:=StringReplace(result,'{Time}',DateTimeToISO8601(FTimeTagSelected),[rfIgnoreCase]);
+  end else begin
+    result:=result+ParameterList.GetURLParameter;
+  end;
 end;
 
 constructor TWMTS_Layer.Create;
 begin
   inherited Create;
   FParameterList:=TWMTS_ParameterList.Create(Self);
+  SetLength(FTimeTags,0);
+  FTimeTagSelected:=0.0;
 end;
 
 destructor TWMTS_Layer.Destroy;
 begin
+  SetLength(FTimeTags,0);
   FParameterList.Free;
   inherited Destroy;
 end;
@@ -513,6 +703,10 @@ var manifest:TMemoryStream;
     tmpTileMatrix:TWMTS_TileMatrix;
     tmpTileMatrixSet:TWMTS_TileMatrixSet;
     px,py,kvp_url,dimension_id:string;
+    //is_ISO8601:boolean;
+    len_timetags:integer;
+    dt1,dt2:TDateTime;
+    TimeOption,ISO8601_Interval:string;
 begin
   manifest:=TMemoryStream.Create;
   try
@@ -572,12 +766,30 @@ begin
             tmpLayer.FStyle:=content_node.FindNode('Style').FindNode('ows:Identifier').FirstChild.NodeValue;
             tmp_node:=nil;
             tmp_node:=content_node.FindNode('Dimension');
+            tmpLayer.UsingISO8601:=false;
             if tmp_node<>nil then begin
               dimension_id:=tmp_node.FindNode('ows:Identifier').FirstChild.NodeValue;
+              if tmp_node.FindNode('ows:UOM')<>nil then begin
+                //ISO8601
+                tmpLayer.UsingISO8601:=true;
+                {default_dt}tm2_node:=tmp_node.FindNode('ows:UOM');
+                tmpLayer.FTimeTagSelected:=ISO8601ToDateTime({default_dt}tm2_node.FirstChild.NodeValue);
+              end;
               {dims}mt_len:=tmp_node.ChildNodes.Count;
               for {dims}mt_idx:=0 to {dims}mt_len-1 do begin
                 tm2_node:=tmp_node.ChildNodes[{dims}mt_idx];
-                if tm2_node.NodeName='Value' then tmpLayer.FParameterList.Parameter[dimension_id].Add(tm2_node.FirstChild.NodeValue);
+                if tm2_node.NodeName='Value' then begin
+                  TimeOption:=tm2_node.FirstChild.NodeValue;
+                  tmpLayer.FParameterList.Parameter[dimension_id].Add(TimeOption);
+                  len_timetags:=Length(tmpLayer.FTimeTags);
+                  if ISORepeatingIntervalFindFirst(TimeOption,dt1,dt2,ISO8601_Interval) then begin
+                    repeat
+                      SetLength(tmpLayer.FTimeTags,len_timetags+1);
+                      tmpLayer.FTimeTags[len_timetags]:=dt1;
+                      inc(len_timetags);
+                    until not ISORepeatingIntervalFindNext(dt1,dt2,ISO8601_Interval);
+                  end;
+                end;
               end;
             end;
             if FKvpUrl='' then

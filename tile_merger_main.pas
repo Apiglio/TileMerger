@@ -10,7 +10,7 @@ uses
   {$ifdef windows}
   Windows,
   {$endif}
-  tile_merger_view, tile_merger_wmts_client;
+  tile_merger_view, tile_merger_wmts_client, CalendarFlow;
 
 const
   _appname_ = 'Apiglio TileMerger';
@@ -23,6 +23,7 @@ type
   { TFormTileMerger }
 
   TFormTileMerger = class(TForm)
+    CalendarFlow_TimeOption: TCalendarFlow;
     Label_export: TLabel;
     MainMenu_TileMerger: TMainMenu;
     MenuItem_ViewShowScale: TMenuItem;
@@ -50,9 +51,11 @@ type
     MenuItem_Server: TMenuItem;
     Panel_viewer: TPanel;
     PopupMenu_TileViewer: TPopupMenu;
+    Splitter_PanelH: TSplitter;
     Splitter_MainV: TSplitter;
     StatusBar_TileMerger: TStatusBar;
     TreeView_wmts_list: TTreeView;
+    procedure CalendarFlow_TimeOptionDateChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure MenuItem_DownloadCachePathClick(Sender: TObject);
     procedure MenuItem_DownloadExportClick(Sender: TObject);
@@ -129,8 +132,19 @@ begin
   Caption:=_appname_;
   FTileViewer.OnLayerChange:=@UpdateStatusBar;
   FTileViewer.OnTileMatrixSetChange:=@UpdateStatusBar;
+  CalendarFlow_TimeOption.CellSize.BeltWidth:=48;//神奇，beltwidth在properties里头怎么设置不了
   UpdateStatusBar(Self);
 
+end;
+
+procedure TFormTileMerger.CalendarFlow_TimeOptionDateChange(Sender: TObject);
+var tmpCF:TCalendarFlow;
+    tmpLayer:TWMTS_Layer;
+begin
+  tmpCF:=Sender as TCalendarFlow;
+  tmpLayer:=FTileViewer.CurrentLayer;
+  tmpLayer.TimeTagSelected:=tmpCF.CurrentDate;
+  if tmpLayer.TimeTagCount>1 then FTileViewer.Refresh;
 end;
 
 procedure TFormTileMerger.MenuItem_DownloadCachePathClick(Sender: TObject);
@@ -251,6 +265,7 @@ begin
 end;
 
 procedure TFormTileMerger.UpdateStatusBar(Sender: TObject);
+var idx,len:integer;
 begin
   with StatusBar_TileMerger.Panels[0] do begin
     Text:=FTileViewer.CurrentLayer.Title;
@@ -259,6 +274,15 @@ begin
   with StatusBar_TileMerger.Panels[1] do begin
     Text:=FTileViewer.CurrentTileMatrixSet.Identifier;
     Width:=Canvas.TextWidth(Text+'##');
+  end;
+  CalendarFlow_TimeOption.ClearCountDate;
+  with FTileViewer.CurrentLayer do begin
+    len:=TimeTagCount;
+    CalendarFlow_TimeOption.BeginUpdate;
+    for idx:=len-1 downto 0 do CalendarFlow_TimeOption.CountInDate(TimeTag[idx]);
+    CalendarFlow_TimeOption.CurrentDate:=TimeTag[len-1];
+    CalendarFlow_TimeOption.EndUpdate;
+    if TimeTagSelected<>0.0 then CalendarFlow_TimeOption.CurrentDate:=TimeTagSelected;
   end;
 end;
 
