@@ -170,6 +170,7 @@ type
       new_pattern:string;
     end;
     token:string;
+    ua_preference:string;//empty means ArcGIS UA (assign when creating server)
     fixed_meter_per_pixel:TGeoCoord;//0 means automatical
   end;
 
@@ -708,6 +709,7 @@ var manifest:TMemoryStream;
     dt1,dt2:TDateTime;
     TimeOption,ISO8601_Interval:string;
 begin
+  if ServiceConfig.ua_preference<>'' then UserAgent := ServiceConfig.ua_preference;
   manifest:=TMemoryStream.Create;
   try
     with TFPHTTPClient.Create(nil) do try
@@ -933,7 +935,7 @@ begin
   tmpService.LoadFromManifestXml(_wayback_, tmpServiceConfig);
   FServiceList.Add(tmpService);
 
-  //需要解决Time维度
+
   tmpServiceConfig.url_replacement.old_pattern:='';
   tmpServiceConfig.url_replacement.new_pattern:='';
   tmpServiceConfig.token:='0e2c50def624b69b1dcb67f43f353c49';
@@ -942,25 +944,6 @@ begin
   tmpService.LoadFromManifestXml('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml', ServiceConfig_Default);
   FServiceList.Add(tmpService);
 
-  tmpServiceConfig.url_replacement.old_pattern:='';
-  tmpServiceConfig.url_replacement.new_pattern:='';
-  tmpServiceConfig.token:='0e2c50def624b69b1dcb67f43f353c49';
-  tmpServiceConfig.fixed_meter_per_pixel:=0.0002803138; //没招了就这样吧
-  tmpService:=TWMTS_Service.Create;
-  tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts', tmpServiceConfig);
-  FServiceList.Add(tmpService);
-  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
-  tmpService.DisplayName:='天地图福建 2019';
-
-  tmpServiceConfig.url_replacement.old_pattern:='';
-  tmpServiceConfig.url_replacement.new_pattern:='';
-  tmpServiceConfig.token:='ef1e65139e1e3571ff1338d9a72e8142';
-  tmpServiceConfig.fixed_meter_per_pixel:=0;
-  tmpService:=TWMTS_Service.Create;
-  tmpService.LoadFromManifestXml('https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts', tmpServiceConfig);
-  FServiceList.Add(tmpService);
-  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
-  tmpService.DisplayName:='天地图全国';
 
   tmpServiceConfig.url_replacement.old_pattern:='';
   tmpServiceConfig.url_replacement.new_pattern:='';
@@ -972,16 +955,81 @@ begin
   tmpService.DisplayName:='Open Street Map (terrestris.de)';
 
 
-  //需要解决Time维度
+  tmpServiceConfig.url_replacement.old_pattern:='';
+  tmpServiceConfig.url_replacement.new_pattern:='';
+  tmpServiceConfig.token:='ef1e65139e1e3571ff1338d9a72e8142';
+  tmpServiceConfig.fixed_meter_per_pixel:=0;
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+  tmpService.DisplayName:='天地图全国';
+
+  //本地XML测试在拆分LoadFromManifestXml后测试
+  {
+  tmpServiceConfig.url_replacement.old_pattern:='';
+  tmpServiceConfig.url_replacement.new_pattern:='';
+  tmpServiceConfig.token:='ef1e65139e1e3571ff1338d9a72e8142';
+  tmpServiceConfig.fixed_meter_per_pixel:=0;
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('file:///E:\LTD\RareMapWMTS_Test.json', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+  }
+
+  //福建天地图系列共用一个ServiceConfig
+
   tmpServiceConfig.url_replacement.old_pattern:='';
   tmpServiceConfig.url_replacement.new_pattern:='';
   tmpServiceConfig.token:='0e2c50def624b69b1dcb67f43f353c49';
   tmpServiceConfig.fixed_meter_per_pixel:=0.0002803138; //没招了就这样吧
+  tmpServiceConfig.ua_preference:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net:80/img_fj_2019/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 2019';
+
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/img_fj_2024_his/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 2024';
+
   tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml('http://s0.fjmap.net/img_fj_2025_his/wmts', tmpServiceConfig);
   FServiceList.Add(tmpService);
-  tmpService.UserAgent:='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
   tmpService.DisplayName:='天地图福建 2025';
+
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/fc_region/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 行政区划';
+
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/fc_diming/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 地名分层';
+  {
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/fc_road/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 交通分层';
+
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/fc_regionanno/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 交通注记';
+
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/fc_water/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 水系分层';
+
+  tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/fc_wateranno/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 水系注记';
+  }
 
 
   //https://t0.tianditu.gov.cn/img_w/wmts?request=GetCapabilities&service=wmts
@@ -1005,6 +1053,7 @@ initialization
   InitSSLInterface;
   with ServiceConfig_Default do begin
     token:='';
+    ua_preference:='';
     url_replacement.old_pattern:='';
     url_replacement.new_pattern:='';
     fixed_meter_per_pixel:=0;

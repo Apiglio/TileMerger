@@ -741,6 +741,7 @@ begin
     FCurrentTileMatrixSet:=TWMTS_Service(CurrentLayer.Service).TileMatrixSetByName[tmpValue.Value];
   end;
 
+  PBestTileMatrix:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX);
   if FOnLayerChange<>nil then FOnLayerChange(Self);
   if FAutoFetchTile then begin
     FTilePool.Clear;
@@ -1252,6 +1253,7 @@ begin
   ZoomTo(2.6e8);
 end;
 
+
 procedure AddProjectionInformationToGeoTIFF(FilenameWithoutExt:String);
 var FileBytes:TMemoryStream;
     TempIFDList:TMemoryStream;
@@ -1358,7 +1360,6 @@ begin
 
 
     FileBytes.SaveToFile(FilenameWithoutExt+'_prj.tif');
-
   finally
     FileBytes.Free;
     TempIFDList.Free;
@@ -1388,7 +1389,7 @@ begin
   //tmpTiffWriter:=TFPWriterTiff.Create;
   try
     tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
-    AddProjectionInformationToGeoTIFF(FilenameWithoutExt);
+    //AddProjectionInformationToGeoTIFF(FilenameWithoutExt); //GeoTIFF的IFD信息修改测试还未完成，临时注释掉
     //GeoTiff里的exif信息要专门去写
     lt:=CurrentTileMatrixSet.Projection.EncodeCoordinate(tmpTile.LeftTop);
     rb:=CurrentTileMatrixSet.Projection.EncodeCoordinate(tmpTile.RightBottom);

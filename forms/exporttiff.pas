@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ComCtrls, tile_merger_wmts_client, tile_merger_view, tile_merger_core;
+  ComCtrls, tile_merger_wmts_client, tile_merger_view;
 
 type
 
@@ -59,10 +59,15 @@ begin
 end;
 
 procedure TForm_ExportTiff.Button_SaveFileNameClick(Sender: TObject);
+var len:integer;
+    fname:string;
 begin
   with SaveDialog_Export do
     if Execute then begin
-      Edit_SaveFileName.Caption:=FileName;
+      fname:=FileName;
+      len:=length(fname);
+      if pos('.tif',lowercase(fname))=len-3 then delete(fname,len-3,4);
+      Edit_SaveFileName.Caption:=fname;
     end;
 end;
 

@@ -14,7 +14,7 @@ uses
 
 const
   _appname_ = 'Apiglio TileMerger';
-  _version_ = '0.4';
+  _version_ = '0.5';
   _authors_ = 'Apiglio';
   _newline_ = {$ifdef windows}#13#10{$else}#10{$endif};
 
@@ -104,8 +104,10 @@ begin
     server:=WMTS_Client.Services[idx_server];
     node:=TreeView_wmts_list.Items.AddChild(root,server.DisplayName);
     node.Data:=server;
-    lyrs:=TreeView_wmts_list.Items.AddChild(node,'数据图层');
-    tmss:=TreeView_wmts_list.Items.AddChild(node,'层级方案');
+
+    lyrs:=node;//展开LYRs列表
+    //lyrs:=TreeView_wmts_list.Items.AddChild(node,'数据图层');
+    //tmss:=TreeView_wmts_list.Items.AddChild(node,'层级方案');
     len:=server.LayerCount;
     for idx:=0 to len-1 do begin
       tmplayer:=server.Layers[idx];
@@ -118,11 +120,14 @@ begin
         end;
       end;
     end;
+    //不再单独呈现TMSs列表，使用TMSLink
+    {
     len:=server.TileMatrixSetCount;
     for idx:=0 to len-1 do begin
       tmpTMS:=server.TileMatrixSets[idx];
       TreeView_wmts_list.Items.AddChild(tmss,tmpTMS.Identifier).Data:=tmpTMS;
     end;
+    }
   end;
   server:=WMTS_Client.Services[0];
   FTileViewer.InitializeLayerAndTileMatrixSet(server.Layers[0],server.TileMatrixSets[0]);
@@ -254,12 +259,17 @@ end;
 
 procedure TFormTileMerger.TreeView_wmts_listSelectionChanged(Sender: TObject);
 var DataObject:TObject;
+    tmpLayer:TWMTS_Layer;
 begin
   DataObject:=TObject(TreeView_wmts_list.Selected.Data);
   if DataObject=nil then exit;
   if DataObject is TWMTS_Layer then FTileViewer.CurrentLayer:=DataObject as TWMTS_Layer;
   if DataObject is TWMTS_TileMatrixSet then FTileViewer.CurrentTileMatrixSet:=DataObject as TWMTS_TileMatrixSet;
-  if DataObject is TWMTS_ParameterValue then TWMTS_ParameterValue(DataObject).Owner.Selected:=TWMTS_ParameterValue(DataObject);
+  if DataObject is TWMTS_ParameterValue then begin
+    TWMTS_ParameterValue(DataObject).Owner.Selected:=TWMTS_ParameterValue(DataObject);
+    tmpLayer:=TWMTS_ParameterValue(DataObject).Owner.Owner.Owner.Owner; //so weird
+    if FTileViewer.CurrentLayer<>tmpLayer then FTileViewer.CurrentLayer:=tmpLayer;
+  end;
   //if FTileViewer.CurrentTileMatrixSet=nil then exit;
   //if FTileViewer.CurrentLayer=nil then exit;
 end;
@@ -284,6 +294,7 @@ begin
     CalendarFlow_TimeOption.EndUpdate;
     if TimeTagSelected<>0.0 then CalendarFlow_TimeOption.CurrentDate:=TimeTagSelected;
   end;
+  CalendarFlow_TimeOption.Refresh; //没有时间参数时，时间轴界面会回到1899/12/31，目前看问题不大
 end;
 
 initialization
