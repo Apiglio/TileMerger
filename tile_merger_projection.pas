@@ -103,6 +103,8 @@ type
   operator =(ina,inb:TGeoPoint):Boolean;
   operator mod(ina,inb:TGeoCoord):TGeoCoord;
 
+  function GCJ02_To_WGS84(const P:TGeoPoint):TGeoPoint;
+
 implementation
 uses math;
 
@@ -377,6 +379,57 @@ begin
   //!!! tfw is not "x is lat and y is lng"
   Result.lng := RadToDeg(coordxy.x / earth_radius);
   Result.lat := RadToDeg(coordxy.y / earth_radius);
+end;
+
+function GCJ02_To_WGS84(const P:TGeoPoint):TGeoPoint;
+const a  = 6378245.0;                 // Krasovsky 1940
+      ee = 0.00669342162296594323;    // 偏心率平方
+      pi = 3.14159265358979323846;
+var   lng, lat: Double;
+      dLat, dLng: Double;
+      radLat, magic, sqrtMagic: Double;
+
+  function OutOfChina(const lng,lat:Double):Boolean;inline;
+  begin
+    Result:=(lng<72.004) or (lng>137.8347) or (lat<0.8293) or (lat>55.8271);
+  end;
+
+  function TransformLat(x, y: Double): Double; inline;
+  begin
+    Result:=-100.0+2.0*x+3.0*y+0.2*y*y+0.1*x*y+0.2*Sqrt(Abs(x));
+    Result:=Result
+     +(20.0*Sin(6.0*x*pi)+20.0*Sin(2.0*x*pi)) * 2.0/3.0
+     +(20.0*Sin(y*pi)+40.0*Sin(y/3.0*pi)) * 2.0/3.0
+     +(160.0*Sin(y/12.0*pi)+320.0*Sin(y*pi/30.0)) * 2.0/3.0;
+  end;
+
+  function TransformLng(x,y:Double):Double;inline;
+  begin
+    Result:=300.0+x+2.0*y+0.1*x*x+0.1*x*y+0.1*Sqrt(Abs(x));
+    Result:=Result
+     +(20.0*Sin(6.0*x*pi)+20.0*Sin(2.0*x*pi)) * 2.0/3.0
+     +(20.0*Sin(x*pi)+40.0*Sin(x/3.0*pi)) * 2.0/3.0
+     +(150.0*Sin(x/12.0*pi)+300.0*Sin(x/30.0*pi)) * 2.0/3.0;
+  end;
+
+begin
+  lng:=P.lng;
+  lat:=P.lat;
+  if OutOfChina(lng, lat) then begin result:=P;exit end;
+  dLat:=TransformLat(lng-105.0, lat-35.0);
+  dLng:=TransformLng(lng-105.0, lat-35.0);
+
+  radLat:=lat/180.0*pi;
+  magic:=Sin(radLat);
+  magic:=1-ee*magic*magic;
+  sqrtMagic:=Sqrt(magic);
+
+  dLat:=(dLat*180.0)/((a*(1-ee))/(magic*sqrtMagic)*pi);
+  dLng:=(dLng*180.0)/(a/sqrtMagic*Cos(radLat)*pi);
+
+  // ---- GCJ02 反推 WGS84（核心一步）----
+  Result.lng:=lng-dLng;
+  Result.lat:=lat-dLat;
 end;
 
 
