@@ -395,14 +395,12 @@ begin
 end;
 
 procedure TFormTileMerger.UpdateFeatureListEntry;
-var root,node:TTreeNode;
+var root:TTreeNode;
     tmpFeatureLayer:TWMTS_FeatureLayer;
     idx,len:integer;
-    option_key,option_value:TCollectionItem;
 begin
   TreeView_wmts_list.BeginUpdate;
   try
-    node:=nil;
     root:=TreeView_wmts_list.Items.FindNodeWithText('要素图层');
     len:=root.Count;
     for idx:=len-1 downto 0 do begin
@@ -411,7 +409,7 @@ begin
     len:=WMTS_Client.FeatureLayerCount;
     for idx:=0 to len-1 do begin
       tmpFeatureLayer:=WMTS_Client.FeatureLayers[idx];
-      TreeView_wmts_list.Items.AddChild(root, tmpFeatureLayer.Title).Data:=tmpFeatureLayer;
+      TreeView_wmts_list.Items.AddChild(root, Format('%s (%d)',[tmpFeatureLayer.Title, tmpFeatureLayer.Features.Count])).Data:=tmpFeatureLayer;
     end;
   finally
     TreeView_wmts_list.EndUpdate;

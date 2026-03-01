@@ -1000,6 +1000,7 @@ begin
   tmpFeatureLayer.Title:='搜索结果';
   tmpFeatureLayer.DisplayName:='搜索结果';
   tmpFeatureLayer.Visible:=true;
+  {
   tmpPoint:=TAGeoPointGeometry.Create(2);
   tmpPoint.X:=119.30;
   tmpPoint.Y:=26.05;
@@ -1010,6 +1011,7 @@ begin
   tmpPoint.Y:=32.16;
   tmpPoint.LabelText:='测试点';
   tmpFeatureLayer.Features.AddFeature(tmpPoint);
+  }
   FFeatureLayerList.Add(tmpFeatureLayer);
 
 

@@ -30,6 +30,7 @@ type
     function GetLabelText:string;
     procedure SetLabelText(value:string);
   public
+    function WKT:string;virtual;abstract;
     constructor Create;
     destructor Destroy; override;
     property LabelText:String read GetLabelText write SetLabelText;
@@ -46,6 +47,7 @@ type
     procedure SetZ(value:Double);
     procedure SetM(value:Double);
   public
+    function WKT:string;virtual;
     constructor Create(ACoordinateDepth:Integer);
     destructor Destroy; override;
     property X:Double read GetX write SetX;
@@ -72,6 +74,8 @@ type
     property Count:Integer read GetItemCount;
   end;
 
+
+  function CreatePoint2D(xPos,yPos:TGeoCoord):TAGeoPointGeometry;
 
 implementation
 
@@ -171,6 +175,16 @@ begin
   (FCoordinates+3)^:=value;
 end;
 
+function TAGeoPointGeometry.WKT:string;
+begin
+  case FCoordinateDepth of
+    2:result:=Format('Point (%f %f)',[X,Y]);
+    3:result:=Format('Point Z (%f %f %f)',[X,Y,Z]);
+    4:result:=Format('Point ZM (%f %f %f %f)',[X,Y,Z,M]);
+    else raise EAGeoCoordinateDepthError.Create;
+  end;
+end;
+
 constructor TAGeoPointGeometry.Create(ACoordinateDepth:Integer);
 begin
   if (ACoordinateDepth<2) or (ACoordinateDepth>4) then raise EAGeoCoordinateDepthError.Create;
@@ -257,6 +271,13 @@ begin
   result:=FFeatureList.Count;
 end;
 
+
+function CreatePoint2D(xPos,yPos:TGeoCoord):TAGeoPointGeometry;
+begin
+  result:=TAGeoPointGeometry.Create(2);
+  result.X:=xPos;
+  result.Y:=yPos;
+end;
 
 end.
 
