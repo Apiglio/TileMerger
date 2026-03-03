@@ -1342,11 +1342,10 @@ begin
 end;
 
 procedure TTileViewer.Clear;
+var idx:integer;
 begin
-  while FTilePool.FTileList.Count>0 do begin
-    TTile(FTilePool.FTileList.Items[0]).Free;
-    FTilePool.FTileList.Delete(0);
-  end;
+  for idx:=FTilePool.FTileList.Count-1 downto 0 do TTile(FTilePool.FTileList.Items[idx]).Free;
+  FTilePool.FTileList.Clear;
 end;
 
 procedure TTileViewer.Refresh;
