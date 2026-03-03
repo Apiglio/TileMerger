@@ -26,6 +26,7 @@ type
     CalendarFlow_TimeOption: TCalendarFlow;
     Label_export: TLabel;
     MainMenu_TileMerger: TMainMenu;
+    MenuItem_FeatureExport: TMenuItem;
     MenuItem_PoiServer: TMenuItem;
     MenuItem_SL_Reload: TMenuItem;
     MenuItem_ViewShowScale: TMenuItem;
@@ -52,8 +53,10 @@ type
     MenuItem_WmtsServer: TMenuItem;
     MenuItem_Server: TMenuItem;
     Panel_viewer: TPanel;
+    PopupMenu_FeatureList: TPopupMenu;
     PopupMenu_ServerList: TPopupMenu;
     PopupMenu_TileViewer: TPopupMenu;
+    SaveDialog_FeatureExport: TSaveDialog;
     Splitter_PanelH: TSplitter;
     Splitter_MainV: TSplitter;
     StatusBar_TileMerger: TStatusBar;
@@ -63,6 +66,7 @@ type
     procedure MenuItem_DownloadCachePathClick(Sender: TObject);
     procedure MenuItem_DownloadExportClick(Sender: TObject);
     procedure MenuItem_DownloadModeSwitchClick(Sender: TObject); //所有的MenuItem_DownloadMode*的OnClick都执行这个
+    procedure MenuItem_FeatureExportClick(Sender: TObject);
     procedure MenuItem_OptionAboutClick(Sender: TObject);
     procedure MenuItem_OptionLogClick(Sender: TObject);
     procedure MenuItem_PoiServerClick(Sender: TObject);
@@ -167,6 +171,22 @@ begin
     FTileViewer.ForceFetchTile:=true;
   end else begin
     assert(false,'无效的菜单选项');
+  end;
+end;
+
+procedure TFormTileMerger.MenuItem_FeatureExportClick(Sender: TObject);
+var filename:string;
+begin
+  if SaveDialog_FeatureExport.Execute then begin
+    filename:=SaveDialog_FeatureExport.FileName;
+    //因为目前只有一个图层可能性，所以暂时只要写死
+    case SaveDialog_FeatureExport.FilterIndex of
+      1 {csv}  : WMTS_Client.FeatureLayers[0].Features.SaveToCSV(filename);
+      //2 {json} : ;
+      //3 {shp}  : ;
+      //4 {kml}  : ;
+      else ShowMessage('暂不支持到处此格式要素文件。');
+    end;
   end;
 end;
 
@@ -307,11 +327,22 @@ var DataObject:TObject;
 begin
   if TreeView_wmts_list.Selected=nil then exit;
   DataObject:=TObject(TreeView_wmts_list.Selected.Data);
-  if DataObject=nil then exit;
+
+  //根据所选项修改右键弹出菜单，并提前退出无有效选择的情况
+  if DataObject=nil then begin
+    TreeView_wmts_list.PopupMenu:=nil;
+    exit;
+  end;
+  if DataObject is TWMTS_FeatureLayer then TreeView_wmts_list.PopupMenu:=PopupMenu_FeatureList
+  else if DataObject is TWMTS_Service then TreeView_wmts_list.PopupMenu:=PopupMenu_ServerList
+  else TreeView_wmts_list.PopupMenu:=nil;
+
+  //根据所选项修改状态变量
   if DataObject is TWMTS_Layer then FTileViewer.CurrentLayer:=DataObject as TWMTS_Layer;
   if DataObject is TWMTS_Service then
     if TWMTS_Service(DataObject).LayerCount=1 then begin
       FTileViewer.CurrentLayer:=TWMTS_Service(DataObject).Layers[0];
+      //此处会导致直接右键服务器时同时导致图层更新，在右键菜单占用的情况下造成瓦片下载内存地址错误
     end else begin
       TreeView_wmts_list.Selected.Expanded:=true;
     end;
@@ -321,8 +352,6 @@ begin
     tmpLayer:=TWMTS_ParameterValue(DataObject).Owner.Owner.Owner.Owner; //so weird
     if FTileViewer.CurrentLayer<>tmpLayer then FTileViewer.CurrentLayer:=tmpLayer;
   end;
-  //if FTileViewer.CurrentTileMatrixSet=nil then exit;
-  //if FTileViewer.CurrentLayer=nil then exit;
 end;
 
 procedure TFormTileMerger.UpdateStatusBar(Sender: TObject);

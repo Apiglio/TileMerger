@@ -18,6 +18,10 @@ type
   EAGeoFeaturesCountError = class(EAGeoError)
     constructor Create;
   end;
+  EAGeoFeaturesTypeError = class(EAGeoError)
+    constructor Create;
+  end;
+
 
   TAGeoFeature = class
   private
@@ -31,6 +35,7 @@ type
     procedure SetLabelText(value:string);
   public
     function WKT:string;virtual;abstract;
+    function CSV:string;virtual;abstract;
     constructor Create;
     destructor Destroy; override;
     property LabelText:String read GetLabelText write SetLabelText;
@@ -47,7 +52,8 @@ type
     procedure SetZ(value:Double);
     procedure SetM(value:Double);
   public
-    function WKT:string;virtual;
+    function WKT:string; override;
+    function CSV:string; override;
     constructor Create(ACoordinateDepth:Integer);
     destructor Destroy; override;
     property X:Double read GetX write SetX;
@@ -90,6 +96,12 @@ end;
 constructor EAGeoFeaturesCountError.Create;
 begin
   inherited Create('要素数量错误');
+end;
+
+{ EAGeoFeaturesTypeError }
+constructor EAGeoFeaturesTypeError.Create;
+begin
+  inherited Create('要素类型错误');
 end;
 
 
@@ -185,6 +197,16 @@ begin
   end;
 end;
 
+function TAGeoPointGeometry.CSV:string;
+const delimiter = ', ';
+var idx:integer;
+begin
+  result:=GetLabelText;
+  for idx:=0 to FCoordinateDepth-1 do begin
+    result:=result+delimiter+FloatToStr((FCoordinates+idx)^);
+  end;
+end;
+
 constructor TAGeoPointGeometry.Create(ACoordinateDepth:Integer);
 begin
   if (ACoordinateDepth<2) or (ACoordinateDepth>4) then raise EAGeoCoordinateDepthError.Create;
@@ -210,10 +232,12 @@ end;
 
 function TAGeoFeatures.RemoveFeature(Index:Integer):boolean;
 begin
+  result:=false;
   if Index<0 then Index:=FFeatureList.Count+Index
   else if Index>=FFeatureList.Count then raise EAGeoFeaturesCountError.Create;
   TAGeoFeature(FFeatureList.Items[Index]).Free;
   FFeatureList.Delete(Index);
+  result:=true;
 end;
 
 procedure TAGeoFeatures.Clear;
@@ -233,14 +257,16 @@ begin
   len:=FFeatureList.Count;
   lines:=TStringList.Create;
   try
+    //判断要素类型
+    tmpFT:=TAGeoFeature(FFeatureList.Items[0]);
+    case TAGeoFeatures(tmpFT).ClassName of
+      'TAGeoPointGeometry': lines.Add('name, lng, lat');
+      else raise EAGeoFeaturesTypeError.Create;
+    end;
+    //创建文件内容
     for idx:=0 to len-1 do begin
       tmpFT:=TAGeoFeature(FFeatureList.Items[idx]);
-      case TAGeoFeatures(tmpFT).ClassName of
-        'TAGeoPointGeometry':begin
-          with TAGeoPointGeometry(tmpFT) do lines.Add(Format('%d,%3.8f,%3.8f,%s',[idx,X,Y,LabelText]));
-        end;
-        //其他几何类型
-      end;
+      lines.Add(tmpFT.CSV);
     end;
     lines.SaveToFile(filename);
   finally

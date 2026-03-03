@@ -91,6 +91,7 @@
         <Filename Value="forms\form_search_poi.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="Form_PoiServer"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit11>
       <Unit12>

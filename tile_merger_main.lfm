@@ -226,4 +226,19 @@ object FormTileMerger: TFormTileMerger
       OnClick = MenuItem_SL_ReloadClick
     end
   end
+  object PopupMenu_FeatureList: TPopupMenu
+    left = 600
+    top = 264
+    object MenuItem_FeatureExport: TMenuItem
+      Caption = '要素导出'
+      OnClick = MenuItem_FeatureExportClick
+    end
+  end
+  object SaveDialog_FeatureExport: TSaveDialog
+    Title = '导出要素'
+    Filter = 'CSV文件（*.csv）|*.csv|GeoJSON（*.json）|*.json|ShapeFile(*.shp; *.shx; *.dbf)|*.shp|KML文件（*.kmz）|*.kmz'
+    Options = [ofOverwritePrompt, ofEnableSizing]
+    left = 600
+    top = 200
+  end
 end

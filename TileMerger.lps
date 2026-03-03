@@ -19,8 +19,9 @@
         <ComponentName Value="FormTileMerger"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="171"/>
-        <CursorPos X="23" Y="186"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="324"/>
+        <CursorPos X="57" Y="345"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -38,8 +39,8 @@
         <Filename Value="tile_merger_wmts_client.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="5"/>
-        <TopLine Value="978"/>
-        <CursorPos X="39" Y="988"/>
+        <TopLine Value="984"/>
+        <CursorPos X="18" Y="999"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -110,388 +111,388 @@
         <Filename Value="tile_merger_feature.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="8"/>
-        <TopLine Value="146"/>
-        <CursorPos X="30" Y="182"/>
-        <UsageCount Value="46"/>
+        <TopLine Value="258"/>
+        <CursorPos X="41" Y="286"/>
+        <UsageCount Value="48"/>
         <Loaded Value="True"/>
       </Unit10>
       <Unit11>
+        <Filename Value="forms\form_search_poi.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form_PoiServer"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="34"/>
+        <CursorPos X="32" Y="63"/>
+        <UsageCount Value="25"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="tile_merger_poi_client.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="6"/>
+        <CursorPos X="31" Y="13"/>
+        <UsageCount Value="25"/>
+        <Loaded Value="True"/>
+      </Unit12>
+      <Unit13>
         <Filename Value="tile_merger_core.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="20"/>
         <CursorPos X="30" Y="38"/>
         <UsageCount Value="192"/>
-      </Unit11>
-      <Unit12>
+      </Unit13>
+      <Unit14>
         <Filename Value="C:\lazarus\lcl\controls.pp"/>
         <UnitName Value="Controls"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="2303"/>
         <CursorPos X="14" Y="2323"/>
         <UsageCount Value="7"/>
-      </Unit12>
-      <Unit13>
+      </Unit14>
+      <Unit15>
         <Filename Value="C:\lazarus\lcl\include\picture.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="568"/>
         <CursorPos X="26" Y="586"/>
         <UsageCount Value="8"/>
-      </Unit13>
-      <Unit14>
+      </Unit15>
+      <Unit16>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\packages\fcl-image\src\fpcanvas.pp"/>
         <UnitName Value="FPCanvas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="354"/>
         <CursorPos X="45" Y="372"/>
         <UsageCount Value="10"/>
-      </Unit14>
-      <Unit15>
+      </Unit16>
+      <Unit17>
         <Filename Value="C:\lazarus\lcl\include\fpimagebitmap.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="117"/>
         <CursorPos Y="141"/>
         <UsageCount Value="10"/>
-      </Unit15>
-      <Unit16>
+      </Unit17>
+      <Unit18>
         <Filename Value="C:\lazarus\lcl\include\canvas.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1700"/>
         <CursorPos X="50" Y="1711"/>
         <UsageCount Value="7"/>
-      </Unit16>
-      <Unit17>
+      </Unit18>
+      <Unit19>
         <Filename Value="C:\lazarus\lcl\include\wincontrol.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="8271"/>
         <CursorPos Y="8289"/>
         <UsageCount Value="7"/>
-      </Unit17>
-      <Unit18>
+      </Unit19>
+      <Unit20>
         <Filename Value="C:\lazarus\lcl\stdctrls.pp"/>
         <UnitName Value="StdCtrls"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1299"/>
         <CursorPos X="14" Y="1319"/>
         <UsageCount Value="7"/>
-      </Unit18>
-      <Unit19>
+      </Unit20>
+      <Unit21>
         <Filename Value="C:\lazarus\lcl\include\customcombobox.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="287"/>
         <CursorPos X="3" Y="296"/>
         <UsageCount Value="7"/>
-      </Unit19>
-      <Unit20>
+      </Unit21>
+      <Unit22>
         <Filename Value="C:\lazarus\components\lazutils\lazutf8classes.pas"/>
         <UnitName Value="LazUTF8Classes"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="121"/>
         <CursorPos Y="151"/>
         <UsageCount Value="4"/>
-      </Unit20>
-      <Unit21>
+      </Unit22>
+      <Unit23>
         <Filename Value="C:\lazarus\lcl\lcltype.pp"/>
         <UnitName Value="LCLType"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="123"/>
         <CursorPos X="26" Y="146"/>
         <UsageCount Value="10"/>
-      </Unit21>
-      <Unit22>
+      </Unit23>
+      <Unit24>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\base.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="119"/>
         <CursorPos X="6" Y="137"/>
         <UsageCount Value="10"/>
-      </Unit22>
-      <Unit23>
+      </Unit24>
+      <Unit25>
         <Filename Value="C:\lazarus\lcl\include\graphic.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="35"/>
         <CursorPos Y="65"/>
         <UsageCount Value="7"/>
-      </Unit23>
-      <Unit24>
+      </Unit25>
+      <Unit26>
         <Filename Value="C:\lazarus\lcl\include\rasterimage.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="194"/>
         <CursorPos Y="211"/>
         <UsageCount Value="8"/>
-      </Unit24>
-      <Unit25>
+      </Unit26>
+      <Unit27>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\classes\classesh.inc"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="268"/>
-        <CursorPos Y="293"/>
-        <UsageCount Value="8"/>
-      </Unit25>
-      <Unit26>
+        <TopLine Value="312"/>
+        <CursorPos X="15" Y="329"/>
+        <UsageCount Value="10"/>
+      </Unit27>
+      <Unit28>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\types.pp"/>
         <UnitName Value="Types"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="68"/>
         <CursorPos X="21" Y="142"/>
         <UsageCount Value="10"/>
-      </Unit26>
-      <Unit27>
+      </Unit28>
+      <Unit29>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\inc\typshrdh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="126"/>
         <CursorPos X="18" Y="143"/>
         <UsageCount Value="10"/>
-      </Unit27>
-      <Unit28>
+      </Unit29>
+      <Unit30>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\inc\typshrd.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="359"/>
         <CursorPos X="3" Y="373"/>
         <UsageCount Value="10"/>
-      </Unit28>
-      <Unit29>
+      </Unit30>
+      <Unit31>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\redef.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="695"/>
         <CursorPos X="10" Y="713"/>
         <UsageCount Value="10"/>
-      </Unit29>
-      <Unit30>
+      </Unit31>
+      <Unit32>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\packages\fcl-xml\src\xmlutils.pp"/>
         <EditorIndex Value="-1"/>
         <UsageCount Value="10"/>
-      </Unit30>
-      <Unit31>
+      </Unit32>
+      <Unit33>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\packages\fcl-xml\src\dom.pp"/>
         <UnitName Value="DOM"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="221"/>
         <CursorPos X="3" Y="200"/>
         <UsageCount Value="10"/>
-      </Unit31>
-      <Unit32>
+      </Unit33>
+      <Unit34>
         <Filename Value="C:\lazarus\lcl\include\brush.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="8"/>
         <CursorPos Y="37"/>
         <UsageCount Value="7"/>
-      </Unit32>
-      <Unit33>
+      </Unit34>
+      <Unit35>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\sysutils\sysutilh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="252"/>
         <CursorPos X="40" Y="270"/>
         <UsageCount Value="7"/>
-      </Unit33>
-      <Unit34>
+      </Unit35>
+      <Unit36>
         <Filename Value="C:\lazarus\lcl\graphtype.pp"/>
         <UnitName Value="GraphType"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1183"/>
         <CursorPos X="51" Y="1200"/>
         <UsageCount Value="7"/>
-      </Unit34>
-      <Unit35>
+      </Unit36>
+      <Unit37>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\sysutils\filutilh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="132"/>
         <CursorPos X="10" Y="150"/>
         <UsageCount Value="10"/>
-      </Unit35>
-      <Unit36>
+      </Unit37>
+      <Unit38>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\sysutils\filutil.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="246"/>
         <CursorPos Y="248"/>
         <UsageCount Value="10"/>
-      </Unit36>
-      <Unit37>
+      </Unit38>
+      <Unit39>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\packages\fcl-web\src\base\fphttpclient.pp"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="167"/>
         <CursorPos X="58" Y="183"/>
         <UsageCount Value="10"/>
-      </Unit37>
-      <Unit38>
+      </Unit39>
+      <Unit40>
         <Filename Value="C:\lazarus\lcl\lclproc.pas"/>
         <UnitName Value="LCLProc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="898"/>
         <CursorPos Y="916"/>
         <UsageCount Value="4"/>
-      </Unit38>
-      <Unit39>
+      </Unit40>
+      <Unit41>
         <Filename Value="C:\lazarus\lcl\intfgraphics.pas"/>
         <UnitName Value="IntfGraphics"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="6083"/>
         <CursorPos Y="6092"/>
         <UsageCount Value="4"/>
-      </Unit39>
-      <Unit40>
+      </Unit41>
+      <Unit42>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\inc\objpash.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="178"/>
         <CursorPos X="22" Y="196"/>
         <UsageCount Value="12"/>
-      </Unit40>
-      <Unit41>
+      </Unit42>
+      <Unit43>
         <Filename Value="..\ACL_CalendarFlow\calendarflow.pas"/>
         <UnitName Value="CalendarFlow"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="493"/>
         <CursorPos X="19" Y="523"/>
         <UsageCount Value="8"/>
-      </Unit41>
-      <Unit42>
+      </Unit43>
+      <Unit44>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\packages\rtl-objpas\src\inc\dateutil.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="106"/>
         <CursorPos X="10" Y="124"/>
         <UsageCount Value="4"/>
-      </Unit42>
-      <Unit43>
+      </Unit44>
+      <Unit45>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\sysutils\sysstrh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="32"/>
         <CursorPos X="93" Y="42"/>
         <UsageCount Value="3"/>
-      </Unit43>
-      <Unit44>
+      </Unit45>
+      <Unit46>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\inc\systemh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1103"/>
         <CursorPos X="10" Y="1121"/>
         <UsageCount Value="10"/>
-      </Unit44>
-      <Unit45>
+      </Unit46>
+      <Unit47>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\sysutils\sysinth.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="51"/>
         <CursorPos Y="57"/>
         <UsageCount Value="4"/>
-      </Unit45>
-      <Unit46>
+      </Unit47>
+      <Unit48>
         <Filename Value="C:\lazarus\components\lazutils\lazfileutils.pas"/>
         <UnitName Value="LazFileUtils"/>
         <EditorIndex Value="-1"/>
         <UsageCount Value="4"/>
-      </Unit46>
-      <Unit47>
+      </Unit48>
+      <Unit49>
         <Filename Value="D:\lazarus\lcl\include\rasterimage.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="193"/>
         <CursorPos Y="211"/>
         <UsageCount Value="11"/>
-      </Unit47>
-      <Unit48>
+      </Unit49>
+      <Unit50>
         <Filename Value="D:\lazarus\lcl\include\picture.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="619"/>
         <CursorPos X="83" Y="629"/>
         <UsageCount Value="8"/>
-      </Unit48>
-      <Unit49>
+      </Unit50>
+      <Unit51>
         <Filename Value="D:\lazarus\lcl\graphics.pp"/>
         <UnitName Value="Graphics"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1216"/>
         <CursorPos X="39" Y="1215"/>
         <UsageCount Value="17"/>
-      </Unit49>
-      <Unit50>
+      </Unit51>
+      <Unit52>
         <Filename Value="D:\lazarus\fpc\3.0.4\source\packages\fcl-web\src\base\fphttpclient.pp"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="374"/>
         <CursorPos X="3" Y="386"/>
         <UsageCount Value="7"/>
-      </Unit50>
-      <Unit51>
+      </Unit52>
+      <Unit53>
         <Filename Value="D:\lazarus\lcl\comctrls.pp"/>
         <UnitName Value="ComCtrls"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="2866"/>
         <CursorPos X="3" Y="2881"/>
         <UsageCount Value="8"/>
-      </Unit51>
-      <Unit52>
+      </Unit53>
+      <Unit54>
         <Filename Value="D:\lazarus\lcl\include\treeview.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1424"/>
         <CursorPos X="48" Y="1439"/>
         <UsageCount Value="8"/>
-      </Unit52>
-      <Unit53>
+      </Unit54>
+      <Unit55>
         <Filename Value="D:\lazarus\lcl\lclproc.pas"/>
         <UnitName Value="LCLProc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="897"/>
         <CursorPos Y="916"/>
         <UsageCount Value="8"/>
-      </Unit53>
-      <Unit54>
+      </Unit55>
+      <Unit56>
         <Filename Value="C:\lazarus\lcl\comctrls.pp"/>
         <UnitName Value="ComCtrls"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="3517"/>
         <CursorPos X="3" Y="3247"/>
         <UsageCount Value="8"/>
-      </Unit54>
-      <Unit55>
+      </Unit56>
+      <Unit57>
         <Filename Value="C:\lazarus\lcl\include\treeview.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="4364"/>
         <CursorPos X="20" Y="4375"/>
         <UsageCount Value="8"/>
-      </Unit55>
-      <Unit56>
+      </Unit57>
+      <Unit58>
         <Filename Value="tile_merger_layer.pas"/>
         <UnitName Value="tile_merger_feature"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="17" Y="11"/>
         <UsageCount Value="20"/>
-      </Unit56>
-      <Unit57>
+      </Unit58>
+      <Unit59>
         <Filename Value="..\FileAccess-SHP\apiglio_geo.pas"/>
         <UnitName Value="Apiglio_Geo"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="27" Y="55"/>
         <UsageCount Value="8"/>
-      </Unit57>
-      <Unit58>
+      </Unit59>
+      <Unit60>
         <Filename Value="..\FileAccess-SHP\apiglio_shapefile.pas"/>
         <UnitName Value="Apiglio_ShapeFile"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="172"/>
         <CursorPos X="77" Y="10"/>
         <UsageCount Value="8"/>
-      </Unit58>
-      <Unit59>
+      </Unit60>
+      <Unit61>
         <Filename Value="C:\lazarus\lcl\graphics.pp"/>
         <UnitName Value="Graphics"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="120"/>
         <CursorPos X="3" Y="139"/>
         <UsageCount Value="10"/>
-      </Unit59>
-      <Unit60>
-        <Filename Value="forms\form_search_poi.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="Form_PoiServer"/>
-        <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="71"/>
-        <CursorPos X="53" Y="93"/>
-        <UsageCount Value="23"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
-      </Unit60>
-      <Unit61>
-        <Filename Value="tile_merger_poi_client.pas"/>
-        <IsPartOfProject Value="True"/>
-        <EditorIndex Value="6"/>
-        <CursorPos X="31" Y="13"/>
-        <UsageCount Value="23"/>
-        <Loaded Value="True"/>
       </Unit61>
       <Unit62>
         <Filename Value="C:\lazarus\fpc\3.0.4\source\packages\fcl-json\src\fpjson.pp"/>
@@ -501,127 +502,115 @@
         <UsageCount Value="10"/>
       </Unit62>
     </Units>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="27" HistoryIndex="26">
       <Position1>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1073" TopLine="1057"/>
+        <Filename Value="forms\form_search_poi.pas"/>
+        <Caret Line="88" TopLine="72"/>
       </Position1>
       <Position2>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1074" TopLine="1057"/>
+        <Filename Value="forms\form_search_poi.pas"/>
+        <Caret Line="89" TopLine="72"/>
       </Position2>
       <Position3>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1075" TopLine="1057"/>
-      </Position3>
-      <Position4>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1077" TopLine="1057"/>
-      </Position4>
-      <Position5>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1078" TopLine="1057"/>
-      </Position5>
-      <Position6>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1079" TopLine="1057"/>
-      </Position6>
-      <Position7>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1082" TopLine="1057"/>
-      </Position7>
-      <Position8>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1083" TopLine="1057"/>
-      </Position8>
-      <Position9>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1066" TopLine="1057"/>
-      </Position9>
-      <Position10>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1079" Column="83" TopLine="1057"/>
-      </Position10>
-      <Position11>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1069" TopLine="1057"/>
-      </Position11>
-      <Position12>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1070" TopLine="1057"/>
-      </Position12>
-      <Position13>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1071" TopLine="1057"/>
-      </Position13>
-      <Position14>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1072" TopLine="1057"/>
-      </Position14>
-      <Position15>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1073" TopLine="1057"/>
-      </Position15>
-      <Position16>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1074" TopLine="1057"/>
-      </Position16>
-      <Position17>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1075" TopLine="1057"/>
-      </Position17>
-      <Position18>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1077" TopLine="1057"/>
-      </Position18>
-      <Position19>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1078" TopLine="1057"/>
-      </Position19>
-      <Position20>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1079" TopLine="1057"/>
-      </Position20>
-      <Position21>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1082" TopLine="1057"/>
-      </Position21>
-      <Position22>
-        <Filename Value="tile_merger_view.pas"/>
-        <Caret Line="1083" TopLine="1057"/>
-      </Position22>
-      <Position23>
-        <Filename Value="forms\form_search_poi.pas"/>
-        <Caret Line="86" Column="17" TopLine="72"/>
-      </Position23>
-      <Position24>
-        <Filename Value="forms\form_search_poi.pas"/>
-        <Caret Line="88" TopLine="72"/>
-      </Position24>
-      <Position25>
-        <Filename Value="forms\form_search_poi.pas"/>
-        <Caret Line="89" TopLine="72"/>
-      </Position25>
-      <Position26>
-        <Filename Value="forms\form_search_poi.pas"/>
-        <Caret Line="96" Column="20" TopLine="72"/>
-      </Position26>
-      <Position27>
-        <Filename Value="forms\form_search_poi.pas"/>
-        <Caret Line="88" TopLine="72"/>
-      </Position27>
-      <Position28>
-        <Filename Value="forms\form_search_poi.pas"/>
-        <Caret Line="89" TopLine="72"/>
-      </Position28>
-      <Position29>
         <Filename Value="forms\form_search_poi.pas"/>
         <Caret Line="81" Column="17" TopLine="72"/>
-      </Position29>
-      <Position30>
+      </Position3>
+      <Position4>
         <Filename Value="forms\form_search_poi.pas"/>
         <Caret Line="89" TopLine="72"/>
-      </Position30>
+      </Position4>
+      <Position5>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="186" Column="22" TopLine="171"/>
+      </Position5>
+      <Position6>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="187" Column="22" TopLine="172"/>
+      </Position6>
+      <Position7>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="194" Column="22" TopLine="174"/>
+      </Position7>
+      <Position8>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="173" Column="69" TopLine="171"/>
+      </Position8>
+      <Position9>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="286" TopLine="276"/>
+      </Position9>
+      <Position10>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="287" TopLine="276"/>
+      </Position10>
+      <Position11>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="288" TopLine="276"/>
+      </Position11>
+      <Position12>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="289" TopLine="276"/>
+      </Position12>
+      <Position13>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="290" TopLine="276"/>
+      </Position13>
+      <Position14>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="291" TopLine="276"/>
+      </Position14>
+      <Position15>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="316" TopLine="297"/>
+      </Position15>
+      <Position16>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="317" TopLine="297"/>
+      </Position16>
+      <Position17>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="327" Column="70" TopLine="309"/>
+      </Position17>
+      <Position18>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="178" Column="3" TopLine="164"/>
+      </Position18>
+      <Position19>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="175" Column="54" TopLine="166"/>
+      </Position19>
+      <Position20>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="187" Column="10" TopLine="166"/>
+      </Position20>
+      <Position21>
+        <Filename Value="tile_merger_feature.pas"/>
+        <Caret Line="252" TopLine="234"/>
+      </Position21>
+      <Position22>
+        <Filename Value="tile_merger_feature.pas"/>
+        <Caret Line="52" Column="16" TopLine="16"/>
+      </Position22>
+      <Position23>
+        <Filename Value="tile_merger_feature.pas"/>
+        <Caret Line="225" Column="60" TopLine="214"/>
+      </Position23>
+      <Position24>
+        <Filename Value="tile_merger_feature.pas"/>
+        <Caret Line="253" Column="49" TopLine="239"/>
+      </Position24>
+      <Position25>
+        <Filename Value="tile_merger_feature.pas"/>
+        <Caret Line="52" Column="15" TopLine="25"/>
+      </Position25>
+      <Position26>
+        <Filename Value="tile_merger_feature.pas"/>
+        <Caret Line="259" Column="30" TopLine="232"/>
+      </Position26>
+      <Position27>
+        <Filename Value="tile_merger_main.pas"/>
+        <Caret Line="185" Column="35" TopLine="166"/>
+      </Position27>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
