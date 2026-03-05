@@ -14,7 +14,7 @@ uses
 
 const
   _appname_ = 'Apiglio TileMerger';
-  _version_ = '0.6';
+  _version_ = '0.7';
   _authors_ = 'Apiglio';
   _newline_ = {$ifdef windows}#13#10{$else}#10{$endif};
 
@@ -181,10 +181,11 @@ begin
     filename:=SaveDialog_FeatureExport.FileName;
     //因为目前只有一个图层可能性，所以暂时只要写死
     case SaveDialog_FeatureExport.FilterIndex of
-      1 {csv}  : WMTS_Client.FeatureLayers[0].Features.SaveToCSV(filename);
-      //2 {json} : ;
-      //3 {shp}  : ;
-      //4 {kml}  : ;
+      1 {csv}      : WMTS_Client.FeatureLayers[0].Features.SaveToCSV(filename);
+      2 {esrijson} : WMTS_Client.FeatureLayers[0].Features.SaveToEsriJSON(filename);
+      3 {geojson}  : WMTS_Client.FeatureLayers[0].Features.SaveToGeoJSON(filename);
+      //4 {shp}      : ;
+      //5 {kml}      : ;
       else ShowMessage('暂不支持到处此格式要素文件。');
     end;
   end;

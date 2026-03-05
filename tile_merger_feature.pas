@@ -5,7 +5,7 @@ unit tile_merger_feature;
 interface
 
 uses
-  Classes, SysUtils, tile_merger_projection;
+  Classes, SysUtils, fpjson, tile_merger_projection;
 
 type
 
@@ -22,7 +22,6 @@ type
     constructor Create;
   end;
 
-
   TAGeoFeature = class
   private
     FCoordinateSize:Integer;
@@ -34,8 +33,11 @@ type
     function GetLabelText:string;
     procedure SetLabelText(value:string);
   public
-    function WKT:string;virtual;abstract;
-    function CSV:string;virtual;abstract;
+    function WKT:string; virtual; abstract;
+    function CSV:string; virtual; abstract;
+    function GeoJSON:TJSONData; virtual; abstract;
+    function EsriJSON:TJSONData; virtual; abstract;
+    class function EsriGeoCode:string; virtual; abstract;
     constructor Create;
     destructor Destroy; override;
     property LabelText:String read GetLabelText write SetLabelText;
@@ -54,6 +56,9 @@ type
   public
     function WKT:string; override;
     function CSV:string; override;
+    function GeoJSON:TJSONData; override;
+    function EsriJSON:TJSONData; override;
+    class function EsriGeoCode:string; override;
     constructor Create(ACoordinateDepth:Integer);
     destructor Destroy; override;
     property X:Double read GetX write SetX;
@@ -70,6 +75,8 @@ type
     function RemoveFeature(Index:Integer):boolean;
     procedure Clear;
     procedure SaveToCSV(filename:string);
+    procedure SaveToGeoJSON(filename:string);
+    procedure SaveToEsriJSON(filename:string);
     constructor Create;
     destructor Destroy; override;
   protected
@@ -103,7 +110,6 @@ constructor EAGeoFeaturesTypeError.Create;
 begin
   inherited Create('要素类型错误');
 end;
-
 
 { TAGeoFeature }
 
@@ -207,6 +213,45 @@ begin
   end;
 end;
 
+function TAGeoPointGeometry.GeoJSON:TJSONData;
+var resultObject, geom, prop: TJSONObject;
+    coords: TJSONArray;
+begin
+  resultObject:=TJSONObject.Create;
+  resultObject.Strings['type']:='Feature';
+  geom:=TJSONObject.Create;
+  geom.Strings['type']:='Point';
+  coords:=TJSONArray.Create;
+  coords.Add(GetX);
+  coords.Add(GetY);
+  geom.Arrays['coordinates']:=coords;
+  resultObject.Objects['geometry']:=geom;
+  prop:=TJSONObject.Create;
+  prop.Strings['name']:=GetLabelText;
+  resultObject.Objects['properties']:=prop;
+  result:=resultObject;
+end;
+
+function TAGeoPointGeometry.EsriJSON:TJSONData;
+var resultObject, geom, attr: TJSONObject;
+begin
+  resultObject:=TJSONObject.Create;
+  attr:=TJSONObject.Create;
+  attr.Integers['FID']:=0; //在Features导出时额外修改
+  attr.Strings['name']:=GetLabelText;
+  resultObject.Objects['attributes']:=attr;
+  geom:=TJSONObject.Create;
+  geom.Floats['x']:=GetX;
+  geom.Floats['y']:=GetY;
+  resultObject.Objects['geometry']:=geom;
+  result:=resultObject;
+end;
+
+class function TAGeoPointGeometry.EsriGeoCode:string;
+begin
+  result:='esriGeometryPoint';
+end;
+
 constructor TAGeoPointGeometry.Create(ACoordinateDepth:Integer);
 begin
   if (ACoordinateDepth<2) or (ACoordinateDepth>4) then raise EAGeoCoordinateDepthError.Create;
@@ -271,6 +316,129 @@ begin
     lines.SaveToFile(filename);
   finally
     lines.Free;
+  end;
+end;
+
+//备用：如果有不支持指数形式浮点数时使用
+{
+function FmtJSON(json_data:TJSONData):string;
+var idx,len:integer;
+    pArray:TJSONArray;
+    pObject:TJSONObject;
+begin
+  //TFormatOption就以后再说吧
+  result:='';
+  case json_data.ClassName of
+    'TJSONFloatNumber':result:=FormatFloat('0.###############',json_data.AsFloat);
+    'TJSONArray':begin
+      pArray:=TJSONArray(json_data);
+      result:='[';
+      len:=pArray.Count;
+      case len of
+        0:;
+        1:result:=result+FmtJSON(pArray.Items[0]);
+        else begin
+          for idx:=0 to len-2 do begin
+            result:=result+FmtJSON(pArray.Items[idx])+',';
+          end;
+          result:=result+FmtJSON(pArray.Items[len-1]);
+        end;
+      end;
+      result:=result+']';
+    end;
+    'TJSONObject':begin
+      pObject:=TJSONObject(json_data);
+      result:='{';
+      len:=pObject.Count;
+      case len of
+        0:;
+        1:result:=result+'"'+StringToJSONString(pObject.Names[0])+'":'+FmtJSON(pObject.Items[0]);
+        else begin
+          for idx:=0 to len-2 do begin
+            result:=result+'"'+StringToJSONString(pObject.Names[idx])+'":'+FmtJSON(pObject.Items[idx])+',';
+          end;
+          result:=result+'"'+StringToJSONString(pObject.Names[len-1])+'":'+FmtJSON(pObject.Items[len-1]);
+        end;
+      end;
+      result:=result+'}';
+    end;
+    else result:=json_data.AsJSON;
+  end;
+end;
+}
+
+procedure TAGeoFeatures.SaveToGeoJSON(filename:string);
+var geojson:TJSONObject;
+    features:TJSONArray;
+    idx,len:integer;
+    geojsonfile:TStringList;
+begin
+  geojson:=TJSONObject.Create;
+  geojsonfile:=TStringList.Create;
+  try
+    geojson.Strings['type']:='FeatureCollection';
+      features:=TJSONArray.Create;
+      len:=FFeatureList.Count;
+      for idx:=0 to len-1 do features.Add(TAGeoFeature(FFeatureList.Items[idx]).GeoJSON);
+    geojson.Arrays['features']:=features;
+    //geojsonfile.Text:=FmtJSON(geojson);
+    geojsonfile.Text:=geojson.FormatJSON();
+    geojsonfile.SaveToFile(filename);
+  finally
+    geojson.Free;
+    geojsonfile.Free;
+  end;
+end;
+
+procedure TAGeoFeatures.SaveToEsriJSON(filename:string);
+var geojson, al, sr, fd, fea:TJSONObject;
+    features, fs:TJSONArray;
+    idx,len:integer;
+    geojsonfile:TStringList;
+    esriJsonGeoCode:string;
+begin
+  if FFeatureList.Count=0 then exit;
+  esriJsonGeoCode:=TAGeoFeature(FFeatureList.Items[0]).EsriGeoCode;
+  geojson:=TJSONObject.Create;
+  geojsonfile:=TStringList.Create;
+  try
+    geojson.Strings['displayFieldName']:='';
+      al:=TJSONObject.Create;
+      al.Strings['FID']:='FID';
+      al.Strings['name']:='name';
+    geojson.Objects['fieldAliases']:=al;
+    geojson.Strings['geometryType']:=esriJsonGeoCode;
+      sr:=TJSONObject.Create;
+      sr.Integers['wkid']:=32651;        //默认WGS-84
+      sr.Integers['lastestWkid']:=32651; //默认WGS-84
+    geojson.Objects['spatialReference']:=sr;
+      fs:=TJSONArray.Create;
+        fd:=TJSONObject.Create;
+        fd.Strings['name']:='FID';
+        fd.Strings['type']:='esriFieldTypeOID';
+        fd.Strings['alias']:='FID';
+      fs.Add(fd);
+        fd:=TJSONObject.Create;
+        fd.Strings['name']:='name';
+        fd.Strings['type']:='esriFieldTypeString';
+        fd.Strings['alias']:='name';
+        fd.Integers['length']:=50;
+      fs.Add(fd);
+    geojson.Arrays['fields']:=fs;
+      features:=TJSONArray.Create;
+      len:=FFeatureList.Count;
+      for idx:=0 to len-1 do begin
+        fea:=TAGeoFeature(FFeatureList.Items[idx]).EsriJSON as TJSONObject;
+        fea.Integers['FID']:=idx;
+        features.Add(fea);
+      end;
+    geojson.Arrays['features']:=features;
+    //geojsonfile.Text:=FmtJSON(geojson);
+    geojsonfile.Text:=geojson.FormatJSON();
+    geojsonfile.SaveToFile(filename);
+  finally
+    geojson.Free;
+    geojsonfile.Free;
   end;
 end;
 

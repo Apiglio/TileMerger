@@ -236,7 +236,7 @@ object FormTileMerger: TFormTileMerger
   end
   object SaveDialog_FeatureExport: TSaveDialog
     Title = '导出要素'
-    Filter = 'CSV文件（*.csv）|*.csv|GeoJSON（*.json）|*.json|ShapeFile(*.shp; *.shx; *.dbf)|*.shp|KML文件（*.kmz）|*.kmz'
+    Filter = 'CSV文件（*.csv）|*.csv|EsriJSON（*.json）|*.json|GeoJSON（*.json）|*.json|ShapeFile(*.shp; *.shx; *.dbf)|*.shp|KML文件（*.kmz）|*.kmz'
     Options = [ofOverwritePrompt, ofEnableSizing]
     left = 600
     top = 200
