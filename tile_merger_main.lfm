@@ -4,9 +4,8 @@ object FormTileMerger: TFormTileMerger
   Top = 374
   Width = 1255
   Caption = 'Tile Merger'
-  ClientHeight = 565
+  ClientHeight = 575
   ClientWidth = 1255
-  DesignTimePPI = 144
   Menu = MainMenu_TileMerger
   OnCreate = FormCreate
   Position = poScreenCenter
@@ -19,7 +18,7 @@ object FormTileMerger: TFormTileMerger
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = StatusBar_TileMerger
     Left = 328
-    Height = 531
+    Height = 553
     Top = 0
     Width = 927
     Anchors = [akTop, akLeft, akRight, akBottom]
@@ -30,10 +29,10 @@ object FormTileMerger: TFormTileMerger
   object Label_export: TLabel
     AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Side = asrCenter
-    Left = 734
-    Height = 24
-    Top = 87
-    Width = 95
+    Left = 749
+    Height = 17
+    Top = 93
+    Width = 64
     Anchors = []
     Caption = ' 导出路径：'
     ParentColor = False
@@ -41,10 +40,11 @@ object FormTileMerger: TFormTileMerger
   object TreeView_wmts_list: TTreeView
     AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = Owner
-    AnchorSideRight.Control = Splitter_MainV
+    AnchorSideRight.Control = CalendarFlow_TimeOption
+    AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = Splitter_PanelH
     Left = 0
-    Height = 352
+    Height = 358
     Top = 0
     Width = 320
     Anchors = [akTop, akLeft, akRight, akBottom]
@@ -58,8 +58,8 @@ object FormTileMerger: TFormTileMerger
   end
   object StatusBar_TileMerger: TStatusBar
     Left = 0
-    Height = 34
-    Top = 531
+    Height = 22
+    Top = 553
     Width = 1255
     Panels = <    
       item
@@ -77,7 +77,7 @@ object FormTileMerger: TFormTileMerger
     AnchorSideTop.Control = Owner
     AnchorSideBottom.Control = StatusBar_TileMerger
     Left = 320
-    Height = 531
+    Height = 553
     Top = 0
     Width = 8
     Align = alNone
@@ -90,12 +90,13 @@ object FormTileMerger: TFormTileMerger
     AnchorSideRight.Control = Splitter_MainV
     AnchorSideBottom.Control = StatusBar_TileMerger
     Left = 0
-    Height = 171
-    Top = 360
+    Height = 187
+    Top = 366
     Width = 320
     Options = [coAutoHorizontalCellSize, coShowMonthCell, coShowYearCell, coBeginWithSunday]
     OnDateChange = CalendarFlow_TimeOptionDateChange
     Anchors = [akTop, akLeft, akRight, akBottom]
+    Constraints.MinWidth = 320
     TabOrder = 4
   end
   object Splitter_PanelH: TSplitter
@@ -104,7 +105,7 @@ object FormTileMerger: TFormTileMerger
     Cursor = crVSplit
     Left = 0
     Height = 8
-    Top = 352
+    Top = 358
     Width = 320
     Align = alNone
     Anchors = [akLeft, akRight]

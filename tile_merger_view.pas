@@ -8,9 +8,12 @@ uses
   {$ifdef UNIX}
   cthreads,
   {$endif}
-  Classes, SysUtils, Controls, Graphics, FileUtil, FPimage, FPWriteTIFF,
+  Classes, SysUtils, Controls, Graphics, FileUtil, FPimage, FPWriteTIFF, FPImgCanv,
   fphttpclient, openssl, URIParser,
   tile_merger_projection, tile_merger_wmts_client, tile_merger_tiff, tile_merger_feature;
+
+const
+  max_thread_count = 100;
 
 type
 
@@ -87,9 +90,11 @@ type
 
   TTileViewerPool = class
   private
-    FTileList:TList;   // 实际上是OnlineTile列表
+    FTileList:TList;
     FCachePath:String; // 网络下载的瓦片暂存位置
     PTileViewer:TObject;
+    FThreadList:TList; // 只保存TileList中的Thread，下载完成后就移出
+    FDownloading:Integer;
   private
     function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
   public
@@ -109,6 +114,7 @@ type
   private
     PTile:TTile;
     FUrl:String;
+    FOwnerPool:TTileViewerPool;
     FForceFetch:Boolean; //无论是否有缓存均下载瓦片并缓存（需要考虑线程竞争）
     FFetchResult:TFetchTileResult;
     FStartTime:TDateTime;
@@ -247,7 +253,7 @@ type
   end;
 
 implementation
-uses debugline, math, LazUTF8;
+uses debugline, math, LazUTF8, Dialogs, Forms;
 
 function fetch_tile_result_to_str(fetchresult:TFetchTileResult):string;
 begin
@@ -551,10 +557,15 @@ begin
     Form_Debug.AddMessage('['+DateTimeToStr(Now)+']  '+Format('L:%s X:%d Y:%d nX:%d nY:%d', [TileMatrix.Identifier, Col, Row, normCol, normRow]));
   Form_Debug.AddMessage(FUrl);
   //}
+  if FOwnerPool<>nil then with FOwnerPool do begin
+    inc(FDownloading);
+  end;
   FStartTime:=Now;
 end;
 
 procedure TFetchTileThread.FetchDone;
+var count_rest, index:integer;
+    next_thread:TFetchTileThread;
 begin
   with PTile do
     Form_Debug.AddMessage(
@@ -564,6 +575,24 @@ begin
   if FFetchResult in [ftrCache, ftrSaved] then begin
     PTile.FEnabled:=true;
     if PTile.OnReady<>nil then PTile.OnReady(PTile);
+  end;
+  if FOwnerPool<>nil then with FOwnerPool do begin
+    dec(FDownloading);
+    //FOwnerPool.FThreadList.Remove(Self); //不要remove，用nil表示已完成
+    index:=FOwnerPool.FThreadList.IndexOf(Self);
+    count_rest:=FThreadList.Count;
+    if (index>=0) and (index<count_rest) then FThreadList[index]:=nil;
+    if FDownloading<max_thread_count then begin
+      while count_rest>0 do begin
+        next_thread:=TFetchTileThread(FThreadList[count_rest-1]);
+        if next_thread<>nil then begin
+          next_thread.Start;
+          break;
+        end;
+        FThreadList.Delete(count_rest-1);
+        dec(count_rest);
+      end;
+    end;
   end;
 end;
 
@@ -627,6 +656,7 @@ begin
   inherited Create(true);
   FUrl:=aUrl;
   PTile:=aTile;
+  FOwnerPool:=nil;
   FForceFetch:=aForceFetch;
   FreeOnTerminate:=true;
 end;
@@ -641,7 +671,9 @@ begin
   result.FCachePath:=Self.FCachePath;
   with result do if normCol>=0 then begin
     thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix, normRow, normCol),TTileViewer(PTileViewer).FForceFetchTile);
-    thread.Start;
+    thread.FOwnerPool:=Self;
+    FThreadList.Add(thread);
+    if FDownloading<max_thread_count then thread.Start;
   end else begin
     //FEnabled:=true;
   end;
@@ -652,6 +684,12 @@ label NEXT;
 var idx,len:integer;
     tmpTile:TTile;
 begin
+  FDownloading:=0;
+  if FThreadList.Count>0 then begin
+    //这里缺一个对遗留线程的清理
+  end;
+  FThreadList.Clear;
+
   //想办法改一种访问更快的散列表
   //因为像福建天地图历史影像这种图源会提供错误的MatrixWidth/Height，所以不再通过这个参数控制瓦片坐标超界
   //aRow:=(aRow+aTileMatrix.RowCount) mod aTileMatrix.RowCount;
@@ -693,6 +731,7 @@ constructor TTileViewerPool.Create(AOwner:TObject);
 begin
   inherited Create;
   FTileList:=TList.Create;
+  FThreadList:=TList.Create;
   FCachePath:='TilesCache';
   PTileViewer:=AOwner;
 end;
@@ -701,6 +740,7 @@ destructor TTileViewerPool.Destroy;
 begin
   Clear;
   FTileList.Free;
+  FThreadList.Free;
   inherited Destroy;
 end;
 
@@ -1483,8 +1523,9 @@ procedure TTileViewer.SaveToGeoTiff(FilenameWithoutExt:String);
 var StopDrawingState:boolean;
     l,t,r,b:double;
     tmpTfwFile:TStringList;
-    //tmpTifFile:TFPCustomImage;
-    //tmpTiffWriter:TFPWriterTiff;
+    tmpTifFile:TFPCustomImage;
+    tmpTiffWriter:TFPWriterTiff;
+    tmpTiffCanvas:TFPImageCanvas;
     tmpTile:TTile;
     lt,rb:TGeoPoint;
 begin
@@ -1494,10 +1535,13 @@ begin
   GetCanvasRange(l,t,r,b);
   tmpTile:=TTile.CreateFromTiles(FTilePool.FTileList);
   tmpTFWFile:=TStringList.Create;
-  //tmpTifFile:=TFPCustomImage.create(tmpTile.Width,tmpTile.Height);
-  //tmpTiffWriter:=TFPWriterTiff.Create;
-  try
-    tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
+  tmpTifFile:=TFPMemoryImage.create(tmpTile.Width, tmpTile.Height);
+  tmpTiffCanvas:=TFPImageCanvas.create(tmpTifFile);
+  tmpTiffCanvas.CopyRect(0,0,tmpTile.FPicture.Bitmap.Canvas,Rect(0, 0, tmpTile.Width-1, tmpTile.Height-1));
+  tmpTiffWriter:=TFPWriterTiff.Create;
+  //try
+    //tmpTile.FPicture.SaveToFile(FilenameWithoutExt+'.tif','tif');
+    tmpTifFile.SaveToFile(FilenameWithoutExt+'.tif', tmpTiffWriter);
     //AddProjectionInformationToGeoTIFF(FilenameWithoutExt); //GeoTIFF的IFD信息修改测试还未完成，临时注释掉
     //GeoTiff里的exif信息要专门去写
     lt:=CurrentTileMatrixSet.Projection.EncodeCoordinate(tmpTile.LeftTop);
@@ -1515,19 +1559,22 @@ begin
     tmpTFWFile.Add(FloatToStr(lt.x));
     tmpTFWFile.Add(FloatToStr(lt.y));
     tmpTFWFile.SaveToFile(FilenameWithoutExt+'.tfw');
-  finally
+  //finally
     StopDrawing:=StopDrawingState;
     tmpTfwFile.Free;
-    //tmpTifFile.Free;
-    //tmpTiffWriter.Free;
+    tmpTifFile.Free;
+    tmpTiffWriter.Free;
+    tmpTiffCanvas.Free;
     tmpTile.Free;
-  end;
+  //end;
 end;
 
 procedure TTileViewer.ShowTiles(AScale:Double=0);
 var c1,c2,r1,r2,col,row:integer;
     bestTM:TWMTS_TileMatrix;
     t1,t2:TTileIndex;
+    total_download:int64;
+    massive_download_result:TModalResult;
 begin
   //TilePool.Clear; //不清空了，所有瓦片都留在池内
   if AScale<=0 then
@@ -1550,6 +1597,13 @@ begin
     r1:=t2.row;
     r2:=t1.row;
   end;
+  total_download:=(c2-c1+1)*(r2-r1+1);
+  if total_download>10000 then
+    massive_download_result:=MessageDlg('大量下载',Format('一次性下载%d个瓦片可能卡死，是否继续？',[total_download]),TMsgDlgType.mtWarning, mbYesNo, 0)
+  else if total_download>1000 then
+    massive_download_result:=MessageDlg('大量下载',Format('一次性下载%d个瓦片需要较长时间，是否继续？',[total_download]),TMsgDlgType.mtInformation, mbYesNo, 0)
+  else massive_download_result:=mrYes;
+  if massive_download_result=mrNo then exit;
   for col:=c1 to c2 do begin
     for row:= r1 to r2 do begin
       TilePool.GetTile(CurrentLayer,bestTM,row,col);

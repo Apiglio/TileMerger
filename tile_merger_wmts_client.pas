@@ -1128,6 +1128,12 @@ begin
   tmpService.DisplayName:='天地图福建 2025';
 
   tmpService:=TWMTS_Service.Create;
+  tmpService.LoadFromManifestXml('http://s0.fjmap.net/img_fj_2026_his/wmts', tmpServiceConfig);
+  FServiceList.Add(tmpService);
+  tmpService.DisplayName:='天地图福建 2026';
+
+
+  tmpService:=TWMTS_Service.Create;
   tmpService.LoadFromManifestXml('https://service.fjmap.net/vec_fj/wmts', tmpServiceConfig);
   FServiceList.Add(tmpService);
   tmpService.DisplayName:='天地图福建 矢量底图 2025';
