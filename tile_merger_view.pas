@@ -12,9 +12,6 @@ uses
   fphttpclient, openssl, URIParser,
   tile_merger_projection, tile_merger_wmts_client, tile_merger_tiff, tile_merger_feature;
 
-const
-  max_thread_count = 100;
-
 type
 
   ETileRangeError = class(Exception)
@@ -95,6 +92,8 @@ type
     PTileViewer:TObject;
     FThreadList:TList; // 只保存TileList中的Thread，下载完成后就移出
     FDownloading:Integer;
+  public
+    MaxDownloadThread:Integer;
   private
     function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
   public
@@ -239,6 +238,9 @@ type
     property OnTileMatrixSetChange:TNotifyEvent read FOnTileMatrixSetChange write FOnTileMatrixSetChange;
     property OnPositionChange:TPositionChangeEvent read FOnPositionChange write FOnPositionChange;
   public
+    MultiDownloadWarning : Integer;
+    MultiDownloadFatal   : Integer;
+  public
     procedure Clear; virtual;
     procedure Refresh;
     procedure ZoomToWorld; virtual;
@@ -253,7 +255,7 @@ type
   end;
 
 implementation
-uses debugline, math, LazUTF8, Dialogs, Forms;
+uses debugline, math, LazUTF8, Dialogs, Forms, form_options;
 
 function fetch_tile_result_to_str(fetchresult:TFetchTileResult):string;
 begin
@@ -582,7 +584,7 @@ begin
     index:=FOwnerPool.FThreadList.IndexOf(Self);
     count_rest:=FThreadList.Count;
     if (index>=0) and (index<count_rest) then FThreadList[index]:=nil;
-    if FDownloading<max_thread_count then begin
+    if FDownloading<MaxDownloadThread then begin
       while count_rest>0 do begin
         next_thread:=TFetchTileThread(FThreadList[count_rest-1]);
         if next_thread<>nil then begin
@@ -673,7 +675,7 @@ begin
     thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix, normRow, normCol),TTileViewer(PTileViewer).FForceFetchTile);
     thread.FOwnerPool:=Self;
     FThreadList.Add(thread);
-    if FDownloading<max_thread_count then thread.Start;
+    if FDownloading<MaxDownloadThread then thread.Start;
   end else begin
     //FEnabled:=true;
   end;
@@ -734,6 +736,7 @@ begin
   FThreadList:=TList.Create;
   FCachePath:='TilesCache';
   PTileViewer:=AOwner;
+  MaxDownloadThread:=100;
 end;
 
 destructor TTileViewerPool.Destroy;
@@ -1598,9 +1601,9 @@ begin
     r2:=t1.row;
   end;
   total_download:=(c2-c1+1)*(r2-r1+1);
-  if total_download>10000 then
+  if total_download>MultiDownloadFatal then
     massive_download_result:=MessageDlg('大量下载',Format('一次性下载%d个瓦片可能卡死，是否继续？',[total_download]),TMsgDlgType.mtWarning, mbYesNo, 0)
-  else if total_download>1000 then
+  else if total_download>MultiDownloadWarning then
     massive_download_result:=MessageDlg('大量下载',Format('一次性下载%d个瓦片需要较长时间，是否继续？',[total_download]),TMsgDlgType.mtInformation, mbYesNo, 0)
   else massive_download_result:=mrYes;
   if massive_download_result=mrNo then exit;
@@ -1678,6 +1681,9 @@ begin
   FScaleY:=320000;
   OnMouseWheel:=@MouseWheel;
   OnResize:=@ViewResize;
+
+  MultiDownloadWarning:=1000;
+  MultiDownloadFatal:=10000;
 end;
 
 destructor TTileViewer.Destroy;

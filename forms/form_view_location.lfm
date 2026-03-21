@@ -1,0 +1,312 @@
+object FormViewLocation: TFormViewLocation
+  Left = 915
+  Height = 154
+  Top = 475
+  Width = 928
+  Caption = '跳转至'
+  ClientHeight = 154
+  ClientWidth = 928
+  DesignTimePPI = 144
+  OnActivate = FormActivate
+  Position = poOwnerFormCenter
+  LCLVersion = '1.8.4.0'
+  object Label_LngTitle: TLabel
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Edit_Lng
+    Left = 50
+    Height = 24
+    Top = 20
+    Width = 54
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 8
+    Caption = '经度：'
+    ParentColor = False
+  end
+  object Edit_Lng: TEdit
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Label_LngEqualution
+    Left = 112
+    Height = 32
+    Top = 16
+    Width = 196
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 8
+    OnChange = DecimalToDMS
+    TabOrder = 1
+    Text = '0'
+  end
+  object Label_LngEqualution: TLabel
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Edit_LngDegree
+    Left = 316
+    Height = 24
+    Top = 20
+    Width = 120
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 8
+    Caption = '十进制度    =   '
+    ParentColor = False
+  end
+  object Edit_LngDegree: TEdit
+    AnchorSideLeft.Control = Owner
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideTop.Control = Owner
+    Left = 444
+    Height = 32
+    Top = 16
+    Width = 40
+    BorderSpacing.Top = 16
+    OnChange = DMSToDecimal
+    TabOrder = 2
+    Text = '0'
+  end
+  object Label_LngDegreeUnit: TLabel
+    AnchorSideLeft.Control = Edit_LngDegree
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 492
+    Height = 24
+    Top = 20
+    Width = 28
+    BorderSpacing.Left = 8
+    Caption = '度  '
+    ParentColor = False
+  end
+  object Edit_LngMinute: TEdit
+    AnchorSideLeft.Control = Label_LngDegreeUnit
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 528
+    Height = 32
+    Top = 16
+    Width = 40
+    BorderSpacing.Left = 8
+    OnChange = DMSToDecimal
+    TabOrder = 3
+    Text = '0'
+  end
+  object Label_LngMinuteUnit: TLabel
+    AnchorSideLeft.Control = Edit_LngMinute
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 576
+    Height = 24
+    Top = 20
+    Width = 28
+    BorderSpacing.Left = 8
+    Caption = '分  '
+    ParentColor = False
+  end
+  object Edit_LngSecond: TEdit
+    AnchorSideLeft.Control = Label_LngMinuteUnit
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 612
+    Height = 32
+    Top = 16
+    Width = 80
+    BorderSpacing.Left = 8
+    OnChange = DMSToDecimal
+    TabOrder = 4
+    Text = '0'
+  end
+  object Label_LngSecondUnit: TLabel
+    AnchorSideLeft.Control = Edit_LngSecond
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LngDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 700
+    Height = 24
+    Top = 20
+    Width = 18
+    BorderSpacing.Left = 8
+    Caption = '秒'
+    ParentColor = False
+  end
+  object Label_LatTitle: TLabel
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Edit_Lat
+    Left = 50
+    Height = 24
+    Top = 60
+    Width = 54
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 8
+    Caption = '纬度：'
+    ParentColor = False
+  end
+  object Edit_Lat: TEdit
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Label_LatEqualution
+    Left = 112
+    Height = 32
+    Top = 56
+    Width = 196
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 8
+    OnChange = DecimalToDMS
+    TabOrder = 5
+    Text = '0'
+  end
+  object Label_LatEqualution: TLabel
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Edit_LatDegree
+    Left = 316
+    Height = 24
+    Top = 60
+    Width = 120
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 8
+    Caption = '十进制度    =   '
+    ParentColor = False
+  end
+  object Edit_LatDegree: TEdit
+    AnchorSideLeft.Control = Owner
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideTop.Control = Edit_Lng
+    AnchorSideTop.Side = asrBottom
+    Left = 444
+    Height = 32
+    Top = 56
+    Width = 40
+    BorderSpacing.Top = 8
+    OnChange = DMSToDecimal
+    TabOrder = 6
+    Text = '0'
+  end
+  object Label_LatDegreeUnit: TLabel
+    AnchorSideLeft.Control = Edit_LatDegree
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 492
+    Height = 24
+    Top = 60
+    Width = 28
+    BorderSpacing.Left = 8
+    Caption = '度  '
+    ParentColor = False
+  end
+  object Edit_LatMinute: TEdit
+    AnchorSideLeft.Control = Label_LatDegreeUnit
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 528
+    Height = 32
+    Top = 56
+    Width = 40
+    BorderSpacing.Left = 8
+    OnChange = DMSToDecimal
+    TabOrder = 7
+    Text = '0'
+  end
+  object Label_LatMinuteUnit: TLabel
+    AnchorSideLeft.Control = Edit_LatMinute
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 576
+    Height = 24
+    Top = 60
+    Width = 28
+    BorderSpacing.Left = 8
+    Caption = '分  '
+    ParentColor = False
+  end
+  object Edit_LatSecond: TEdit
+    AnchorSideLeft.Control = Label_LatMinuteUnit
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 612
+    Height = 32
+    Top = 56
+    Width = 80
+    BorderSpacing.Left = 8
+    OnChange = DMSToDecimal
+    TabOrder = 8
+    Text = '0'
+  end
+  object Label_LatSecondUnit: TLabel
+    AnchorSideLeft.Control = Edit_LatSecond
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Edit_LatDegree
+    AnchorSideTop.Side = asrCenter
+    Left = 700
+    Height = 24
+    Top = 60
+    Width = 18
+    BorderSpacing.Left = 8
+    Caption = '秒'
+    ParentColor = False
+  end
+  object Button_Locate: TButton
+    AnchorSideLeft.Control = Owner
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 383
+    Height = 40
+    Top = 106
+    Width = 163
+    Anchors = [akLeft, akBottom]
+    BorderSpacing.Bottom = 8
+    Caption = '跳转'
+    ModalResult = 1
+    OnClick = Button_LocateClick
+    TabOrder = 0
+  end
+  object ComboBox_Lng: TComboBox
+    AnchorSideLeft.Control = Label_LngSecondUnit
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Label_LngEqualution
+    AnchorSideTop.Side = asrCenter
+    Left = 726
+    Height = 32
+    Top = 16
+    Width = 80
+    BorderSpacing.Left = 8
+    ItemHeight = 24
+    ItemIndex = 0
+    Items.Strings = (
+      '东经'
+      '西经'
+    )
+    OnChange = DMSToDecimal
+    Style = csDropDownList
+    TabOrder = 9
+    Text = '东经'
+  end
+  object ComboBox_Lat: TComboBox
+    AnchorSideLeft.Control = Label_LatSecondUnit
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Label_LatEqualution
+    AnchorSideTop.Side = asrCenter
+    Left = 726
+    Height = 32
+    Top = 56
+    Width = 80
+    BorderSpacing.Left = 8
+    ItemHeight = 24
+    ItemIndex = 0
+    Items.Strings = (
+      '北纬'
+      '南纬'
+    )
+    OnChange = DMSToDecimal
+    Style = csDropDownList
+    TabOrder = 10
+    Text = '北纬'
+  end
+end

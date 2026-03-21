@@ -1,0 +1,169 @@
+object FormOptions: TFormOptions
+  Left = 1161
+  Height = 267
+  Top = 575
+  Width = 466
+  BorderIcons = [biSystemMenu]
+  Caption = '设置'
+  ClientHeight = 267
+  ClientWidth = 466
+  DesignTimePPI = 144
+  OnClose = FormClose
+  OnCreate = FormCreate
+  Position = poOwnerFormCenter
+  LCLVersion = '1.8.4.0'
+  object SpinEdit_MaxDownloadTheard: TSpinEdit
+    AnchorSideLeft.Control = Owner
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideTop.Control = Owner
+    Left = 171
+    Height = 32
+    Top = 16
+    Width = 124
+    BorderSpacing.Top = 16
+    MaxValue = 9999
+    MinValue = 1
+    TabOrder = 3
+    Value = 100
+  end
+  object SpinEdit_MultiDownloadWarning: TSpinEdit
+    AnchorSideLeft.Control = SpinEdit_MaxDownloadTheard
+    AnchorSideTop.Control = SpinEdit_MaxDownloadTheard
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = SpinEdit_MaxDownloadTheard
+    AnchorSideRight.Side = asrBottom
+    Left = 171
+    Height = 32
+    Top = 64
+    Width = 124
+    Anchors = [akTop, akLeft, akRight]
+    BorderSpacing.Top = 16
+    MaxValue = 999999
+    MinValue = 1
+    TabOrder = 5
+    Value = 1000
+  end
+  object SpinEdit_MultiDownloadFatal: TSpinEdit
+    AnchorSideLeft.Control = SpinEdit_MaxDownloadTheard
+    AnchorSideTop.Control = SpinEdit_MultiDownloadWarning
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = SpinEdit_MaxDownloadTheard
+    AnchorSideRight.Side = asrBottom
+    Left = 171
+    Height = 32
+    Top = 112
+    Width = 124
+    Anchors = [akTop, akLeft, akRight]
+    BorderSpacing.Top = 16
+    MaxValue = 999999
+    MinValue = 1
+    TabOrder = 4
+    Value = 5000
+  end
+  object Button_Apply: TButton
+    AnchorSideLeft.Control = Owner
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 173
+    Height = 48
+    Top = 211
+    Width = 120
+    Anchors = [akLeft, akBottom]
+    BorderSpacing.Bottom = 8
+    Caption = '应用'
+    OnClick = Button_ApplyClick
+    TabOrder = 0
+  end
+  object Button_Reset: TButton
+    AnchorSideTop.Control = Button_Apply
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Button_Apply
+    Left = 45
+    Height = 48
+    Top = 211
+    Width = 120
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 8
+    Caption = '重设'
+    OnClick = Button_ResetClick
+    TabOrder = 1
+  end
+  object Button_OK: TButton
+    AnchorSideLeft.Control = Button_Apply
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = Button_Apply
+    AnchorSideTop.Side = asrCenter
+    Left = 301
+    Height = 48
+    Top = 211
+    Width = 120
+    BorderSpacing.Left = 8
+    Caption = '确定'
+    ModalResult = 1
+    OnClick = Button_OKClick
+    TabOrder = 2
+  end
+  object Label_MaxDownloadThread: TLabel
+    AnchorSideTop.Control = SpinEdit_MaxDownloadTheard
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = SpinEdit_MaxDownloadTheard
+    Left = 27
+    Height = 24
+    Top = 20
+    Width = 144
+    Anchors = [akTop, akRight]
+    Caption = '最大下载线程数：'
+    ParentColor = False
+  end
+  object Label_MultiDownloadFatal: TLabel
+    AnchorSideTop.Control = SpinEdit_MultiDownloadFatal
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = SpinEdit_MultiDownloadFatal
+    Left = 27
+    Height = 24
+    Top = 116
+    Width = 144
+    Anchors = [akTop, akRight]
+    Caption = '批量下载报警线：'
+    ParentColor = False
+  end
+  object Label_MultiDownloadWarning: TLabel
+    AnchorSideTop.Control = SpinEdit_MultiDownloadWarning
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = SpinEdit_MultiDownloadWarning
+    Left = 27
+    Height = 24
+    Top = 68
+    Width = 144
+    Anchors = [akTop, akRight]
+    Caption = '批量下载提示线：'
+    ParentColor = False
+  end
+  object Label_MultiDownloadWarning_unit: TLabel
+    AnchorSideLeft.Control = SpinEdit_MultiDownloadWarning
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = SpinEdit_MultiDownloadWarning
+    AnchorSideTop.Side = asrCenter
+    Left = 311
+    Height = 24
+    Top = 68
+    Width = 72
+    BorderSpacing.Left = 16
+    Caption = '瓦片 / 次'
+    ParentColor = False
+  end
+  object Label_MultiDownloadFatal_unit: TLabel
+    AnchorSideLeft.Control = SpinEdit_MultiDownloadWarning
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = SpinEdit_MultiDownloadFatal
+    AnchorSideTop.Side = asrCenter
+    Left = 311
+    Height = 24
+    Top = 116
+    Width = 72
+    BorderSpacing.Left = 16
+    Caption = '瓦片 / 次'
+    ParentColor = False
+  end
+end

@@ -33,7 +33,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="13">
+    <Units Count="15">
       <Unit0>
         <Filename Value="TileMerger.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -98,6 +98,20 @@
         <Filename Value="tile_merger_poi_client.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit12>
+      <Unit13>
+        <Filename Value="forms\form_options.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormOptions"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="forms\form_view_location.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormViewLocation"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit14>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

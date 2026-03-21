@@ -26,6 +26,7 @@ type
     CalendarFlow_TimeOption: TCalendarFlow;
     Label_export: TLabel;
     MainMenu_TileMerger: TMainMenu;
+    MenuItem_ViewLocation: TMenuItem;
     MenuItem_FeatureExport: TMenuItem;
     MenuItem_PoiServer: TMenuItem;
     MenuItem_SL_Reload: TMenuItem;
@@ -69,11 +70,13 @@ type
     procedure MenuItem_FeatureExportClick(Sender: TObject);
     procedure MenuItem_OptionAboutClick(Sender: TObject);
     procedure MenuItem_OptionLogClick(Sender: TObject);
+    procedure MenuItem_OptionSettingClick(Sender: TObject);
     procedure MenuItem_PoiServerClick(Sender: TObject);
     procedure MenuItem_SL_ReloadClick(Sender: TObject);
     procedure MenuItem_TV_RedownloadClick(Sender: TObject);
     procedure MenuItem_TV_ZoomToResolutionClick(Sender: TObject);
     procedure MenuItem_ViewAutoFetchClick(Sender: TObject);
+    procedure MenuItem_ViewLocationClick(Sender: TObject);
     procedure MenuItem_ViewShowGridClick(Sender: TObject);
     procedure MenuItem_ViewShowInfoClick(Sender: TObject);
     procedure MenuItem_ViewShowScaleClick(Sender: TObject);
@@ -85,6 +88,8 @@ type
   private
     FTileViewer:TTileViewer;
   public
+    property TileViewer:TTileViewer read FTileViewer;
+  public
     procedure UpdateStatusBar(Sender: TObject);
     procedure UpdateServerListEntry(Server:TWMTS_Service; ServerNode:TTreeNode=nil);
     procedure UpdateFeatureListEntry;
@@ -95,7 +100,7 @@ var
   WMTS_Client:TWMTS_Client;
 
 implementation
-uses debugline, exporttiff, form_search_poi, tile_merger_projection;
+uses debugline, exporttiff, form_search_poi, form_options, form_view_location, tile_merger_projection;
 
 {$R *.lfm}
 
@@ -201,6 +206,11 @@ begin
   Form_Debug.Show;
 end;
 
+procedure TFormTileMerger.MenuItem_OptionSettingClick(Sender: TObject);
+begin
+  FormOptions.Execute;
+end;
+
 procedure TFormTileMerger.MenuItem_PoiServerClick(Sender: TObject);
 begin
   //临时用于查找POI，该菜单按键后续用于POI服务器的设置
@@ -269,6 +279,11 @@ procedure TFormTileMerger.MenuItem_ViewAutoFetchClick(Sender: TObject);
 begin
   FTileViewer.AutoFetchTile:=not MenuItem_ViewAutoFetch.Checked;
   MenuItem_ViewAutoFetch.Checked:=FTileViewer.AutoFetchTile;
+end;
+
+procedure TFormTileMerger.MenuItem_ViewLocationClick(Sender: TObject);
+begin
+  FormViewLocation.ShowModal;
 end;
 
 procedure TFormTileMerger.MenuItem_ViewShowGridClick(Sender: TObject);
