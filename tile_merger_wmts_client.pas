@@ -237,11 +237,13 @@ type
     function GetService(index:integer):TWMTS_Service;
     function GetServiceCount:Integer;
     function GetFeatureLayer(index:integer):TWMTS_FeatureLayer;
+    function GetFeatureLayerByName(layername:string):TWMTS_FeatureLayer;
     function GetFeatureLayerCount:Integer;
   public
     property Services[index:integer]:TWMTS_Service read GetService;
     property ServiceCount:Integer read GetServiceCount;
     property FeatureLayers[index:integer]:TWMTS_FeatureLayer read GetFeatureLayer;
+    property FeatureLayerByName[layername:string]:TWMTS_FeatureLayer read GetFeatureLayerByName;
     property FeatureLayerCount:integer read GetFeatureLayerCount;
   public
     procedure Clear;
@@ -970,6 +972,21 @@ begin
   result:=TWMTS_FeatureLayer(FFeatureLayerList.Items[index]);
 end;
 
+function TWMTS_Client.GetFeatureLayerByName(layername:string):TWMTS_FeatureLayer;
+var idx,len:integer;
+    tmpFL:TWMTS_FeatureLayer;
+begin
+  len:=FFeatureLayerList.Count;
+  for idx:=len-1 downto 0 do begin
+    tmpFL:=TWMTS_FeatureLayer(FFeatureLayerList.Items[idx]);
+    if tmpFL.Title=layername then begin
+      result:=tmpFL;
+      exit;
+    end;
+  end;
+  result:=nil;
+end;
+
 function TWMTS_Client.GetFeatureLayerCount:Integer;
 begin
   result:=FFeatureLayerList.Count;
@@ -1013,6 +1030,12 @@ begin
   tmpFeatureLayer.Features.AddFeature(tmpPoint);
   }
   FFeatureLayerList.Add(tmpFeatureLayer);
+  tmpFeatureLayer:=TWMTS_FeatureLayer.Create;
+  tmpFeatureLayer.Title:='视图框';
+  tmpFeatureLayer.DisplayName:='视图框';
+  tmpFeatureLayer.Visible:=true;
+  FFeatureLayerList.Add(tmpFeatureLayer);
+
 
 
   tmpServiceConfig.url_replacement.old_pattern:='//wayback.';

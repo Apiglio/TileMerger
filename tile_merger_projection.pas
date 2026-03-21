@@ -29,9 +29,11 @@ type
     function GetHeight:TGeoCoord;
     procedure SetWidth(Value:TGeoCoord);
     procedure SetHeight(Value:TGeoCoord);
+    function GetCentroid:TGeoPoint;
   public
     property Width: TGeoCoord read GetWidth write SetWidth;
     property Height: TGeoCoord read GetHeight write SetHeight;
+    property Centroid:TGeoPoint read GetCentroid;
   end;
 
   TTileIndex = record
@@ -49,6 +51,7 @@ type
     FMetterPerPixel:TGeoCoord;
   public
     function LatlongToXY(latlong:TGeoPoint):TGeoPoint; virtual; abstract;
+    function LatlongToXY(latlong:TGeoRectangle):TGeoRectangle; virtual;
     function XYToLatlong(coordxy:TGeoPoint):TGeoPoint; virtual; abstract;
     function DecodeCoordinate(raw:TGeoPoint):TGeoPoint; virtual;
     function EncodeCoordinate(coordxy:TGeoPoint):TGeoPoint; virtual;
@@ -153,6 +156,11 @@ begin
   RightBottom.y := LeftTop.y - Value;
 end;
 
+function TGeoRectangle.GetCentroid:TGeoPoint;
+begin
+  result.x:=(LeftTop.x+RightBottom.x)/2.0;
+  result.y:=(LeftTop.y+RightBottom.y)/2.0;
+end;
 
 {TProjection}
 
@@ -212,6 +220,12 @@ begin
 
   Result.col := Floor((Point.x - TopLeftCorner.x) / tileSpanX);
   Result.row := Floor((TopLeftCorner.y - Point.y) / tileSpanY);
+end;
+
+function TProjection.LatlongToXY(latlong:TGeoRectangle):TGeoRectangle;
+begin
+  result.LeftTop:=LatlongToXY(latlong.LeftTop);
+  result.RightBottom:=LatlongToXY(latlong.RightBottom);
 end;
 
 function TProjection.GetWMTSTileIndexNormalized(

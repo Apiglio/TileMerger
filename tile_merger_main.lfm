@@ -132,6 +132,10 @@ object FormTileMerger: TFormTileMerger
         Caption = '跳转至……'
         OnClick = MenuItem_ViewLocationClick
       end
+      object MenuItem_ViewSaveRect: TMenuItem
+        Caption = '保存视图位置'
+        OnClick = MenuItem_ViewSaveRectClick
+      end
       object MenuItem_ViewDiv01: TMenuItem
         Caption = '-'
       end

@@ -211,9 +211,11 @@ type
   public
     function CursorToLocation(X,Y:Integer):TGeoPoint;
     function LocationToCursor(CoordX,CoordY:Double):TPoint;
+    function ViewRect:TGeoRectangle;
     procedure PanToPoint(APoint:TGeoPoint);
     procedure Zoom(AOrigin:TGeoPoint;AScale:Double);
     procedure ZoomTo(AScale:Double);
+    procedure ZoomRect(ARect:TGeoRectangle; AMargin:Double=1.25);
   protected
     procedure ProportionCorrection;
     procedure CoordinateCorrection;
@@ -992,6 +994,12 @@ begin
   result.Y:=round(Height*(FLeftTop.y-CoordY)/CanvasHeight);
 end;
 
+function TTileViewer.ViewRect:TGeoRectangle;
+begin
+  result.LeftTop:=LeftTop;
+  result.RightBottom:=RightBottom;
+end;
+
 procedure TTileViewer.PanToPoint(APoint:TGeoPoint);
 var offset:TGeoPoint;
 begin
@@ -1021,6 +1029,19 @@ end;
 procedure TTileViewer.ZoomTo(AScale:Double);
 begin
   Zoom(CanvasCenter,AScale/FScaleX);
+end;
+
+procedure TTileViewer.ZoomRect(ARect:TGeoRectangle; AMargin:Double=1.25);
+var rh,rw,sh,sw:double;
+begin
+  PanToPoint(ARect.Centroid);
+  rh:=ARect.Height;
+  rw:=ARect.Width;
+  if rh*rw=0 then exit;
+  sh:=rh/Height/CurrentTileMatrixSet.MeterPerPixel;
+  sw:=rw/Width/CurrentTileMatrixSet.MeterPerPixel;
+  if sh>sw then ZoomTo(sh*AMargin)
+  else ZoomTo(sw*AMargin);
 end;
 
 procedure TTileViewer.ProportionCorrection;
@@ -1084,6 +1105,23 @@ begin
     0,360*16);
 end;
 
+procedure drawCanvasSegment(aCanvas:TCanvas;aPoint,bPoint:TPoint;aWidth:integer);inline;
+var symbol_color:TColor;
+    stored_width:integer;
+begin
+  symbol_color:=aCanvas.Pen.Color;
+  stored_width:=aCanvas.Pen.Width;
+  aCanvas.Pen.Color:=clWhite;
+  aCanvas.Pen.Width:=aWidth+2;
+  aCanvas.Line(aPoint,bPoint);
+
+  aCanvas.Pen.Color:=symbol_color;
+  aCanvas.Pen.Width:=aWidth;
+  aCanvas.Line(aPoint,bPoint);
+
+  aCanvas.Pen.Width:=stored_width;
+end;
+
 procedure drawCanvasText(aCanvas:TCanvas;aPoint:TPoint;aText:string;offset_x:integer=0;offset_y:integer=0);inline;
 var font_color:TColor;
 begin
@@ -1098,11 +1136,20 @@ begin
 end;
 
 procedure TTileViewer.PaintFeature;
-var idx,len,fid:integer;
+var idx,len,fid,vlen,vidx:integer;
     tmpFL:TWMTS_FeatureLayer;
     tmpFT:TAGeoFeature;
-    tmpPoint:TPoint;
+    tmpPoint,oriPoint:TPoint;
     gpLL,gpXY:TGeoPoint;
+    function LatLongToCanvasXY(xPos,yPos:TGeoCoord):TPoint;
+    var latlong,xy:TGeoPoint;
+    begin
+      latlong.x:=xPos;
+      latlong.y:=yPos;
+      xy:=CurrentTileMatrixSet.Projection.LatlongToXY(latlong);
+      tmpPoint:=LocationToCursor(xy.X, xy.Y);
+    end;
+
 begin
   len:=FFeatureLayers.Count;
   if len=0 then exit;
@@ -1122,11 +1169,31 @@ begin
       case tmpFT.ClassName of
         'TAGeoPointGeometry':
           begin
+            {
             gpLL.X:=TAGeoPointGeometry(tmpFT).X;
             gpLL.Y:=TAGeoPointGeometry(tmpFT).Y;
             gpXY:=CurrentTileMatrixSet.Projection.LatlongToXY(gpLL);
             tmpPoint:=LocationToCursor(gpXY.X, gpXY.Y);
             drawCanvasCircle(Canvas, tmpPoint, 4);
+            }
+            with TAGeoPointGeometry(tmpFT) do tmpPoint:=LatLongToCanvasXY(X,Y);
+            drawCanvasCircle(Canvas, tmpPoint, 4);
+          end;
+        'TAGeoPolyline':
+          begin
+            vlen:=TAGeoPolyline(tmpFT).CountVertex;
+            if vlen>2 then begin
+              TAGeoPolyline(tmpFT).SeekVertes(0);
+              with TAGeoPolyline(tmpFT) do oriPoint:=LatLongToCanvasXY(X,Y);
+              vidx:=1;
+              while vidx<vlen do begin
+                TAGeoPolyline(tmpFT).SeekVertes(vidx);
+                with TAGeoPolyline(tmpFT) do tmpPoint:=LatLongToCanvasXY(X,Y);
+                drawCanvasSegment(Canvas, oriPoint, tmpPoint, 1);
+                oriPoint:=tmpPoint;
+                inc(vidx);
+              end;
+            end;
           end
         else assert(false, '异常的要素类型');
       end;

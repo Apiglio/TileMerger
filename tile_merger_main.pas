@@ -14,7 +14,7 @@ uses
 
 const
   _appname_ = 'Apiglio TileMerger';
-  _version_ = '0.7';
+  _version_ = '0.7.1';
   _authors_ = 'Apiglio';
   _newline_ = {$ifdef windows}#13#10{$else}#10{$endif};
 
@@ -26,6 +26,7 @@ type
     CalendarFlow_TimeOption: TCalendarFlow;
     Label_export: TLabel;
     MainMenu_TileMerger: TMainMenu;
+    MenuItem_ViewSaveRect: TMenuItem;
     MenuItem_ViewLocation: TMenuItem;
     MenuItem_FeatureExport: TMenuItem;
     MenuItem_PoiServer: TMenuItem;
@@ -77,6 +78,7 @@ type
     procedure MenuItem_TV_ZoomToResolutionClick(Sender: TObject);
     procedure MenuItem_ViewAutoFetchClick(Sender: TObject);
     procedure MenuItem_ViewLocationClick(Sender: TObject);
+    procedure MenuItem_ViewSaveRectClick(Sender: TObject);
     procedure MenuItem_ViewShowGridClick(Sender: TObject);
     procedure MenuItem_ViewShowInfoClick(Sender: TObject);
     procedure MenuItem_ViewShowScaleClick(Sender: TObject);
@@ -100,7 +102,8 @@ var
   WMTS_Client:TWMTS_Client;
 
 implementation
-uses debugline, exporttiff, form_search_poi, form_options, form_view_location, tile_merger_projection;
+uses debugline, exporttiff, form_search_poi, form_options, form_view_location,
+     tile_merger_feature, tile_merger_projection;
 
 {$R *.lfm}
 
@@ -127,8 +130,12 @@ begin
     node.Data:=server;
     UpdateServerListEntry(server, node);
   end;
+
   UpdateFeatureListEntry;
-  FTileViewer.AddFeatureLayer(WMTS_Client.FeatureLayers[0]);
+  len:=WMTS_Client.FeatureLayerCount;
+  for idx:=len-1 downto 0 do begin
+    FTileViewer.AddFeatureLayer(WMTS_Client.FeatureLayers[idx]);
+  end;
 
   server:=WMTS_Client.Services[0];
   FTileViewer.InitializeLayerAndTileMatrixSet(server.Layers[0],server.TileMatrixSets[0]);
@@ -181,14 +188,16 @@ end;
 
 procedure TFormTileMerger.MenuItem_FeatureExportClick(Sender: TObject);
 var filename:string;
+    SelectedFeatureLayer:TWMTS_FeatureLayer;
 begin
+  if not (TObject(TreeView_wmts_list.Selected.Data) is TWMTS_FeatureLayer) then exit;
+  SelectedFeatureLayer:=TWMTS_FeatureLayer(TreeView_wmts_list.Selected.Data);
   if SaveDialog_FeatureExport.Execute then begin
     filename:=SaveDialog_FeatureExport.FileName;
-    //因为目前只有一个图层可能性，所以暂时只要写死
     case SaveDialog_FeatureExport.FilterIndex of
-      1 {csv}      : WMTS_Client.FeatureLayers[0].Features.SaveToCSV(filename);
-      2 {esrijson} : WMTS_Client.FeatureLayers[0].Features.SaveToEsriJSON(filename);
-      3 {geojson}  : WMTS_Client.FeatureLayers[0].Features.SaveToGeoJSON(filename);
+      1 {csv}      : SelectedFeatureLayer.Features.SaveToCSV(filename);
+      2 {esrijson} : SelectedFeatureLayer.Features.SaveToEsriJSON(filename);
+      3 {geojson}  : SelectedFeatureLayer.Features.SaveToGeoJSON(filename);
       //4 {shp}      : ;
       //5 {kml}      : ;
       else ShowMessage('暂不支持到处此格式要素文件。');
@@ -286,6 +295,40 @@ begin
   FormViewLocation.ShowModal;
 end;
 
+procedure TFormTileMerger.MenuItem_ViewSaveRectClick(Sender: TObject);
+var view_name:string;
+    tmpFT:TAGeoPolyline;
+    view_rect:TGeoRectangle;
+    ltLL, rbLL:TGeoPoint;
+begin
+  view_name:=InputBox('保存视图','保存视图名称：','');
+  if view_name<>'' then begin
+    view_rect:=TileViewer.ViewRect;
+    ltLL:=TileViewer.CurrentTileMatrixSet.Projection.XYToLatlong(view_rect.LeftTop);
+    rbLL:=TileViewer.CurrentTileMatrixSet.Projection.XYToLatlong(view_rect.RightBottom);
+    tmpFT:=TAGeoPolyline.Create(2);
+    tmpFT.AppendVertex(5);
+    tmpFT.SeekVertes(0);
+    tmpFT.X:=ltLL.lng;
+    tmpFT.Y:=ltLL.lat;
+    tmpFT.SeekVertes(1);
+    tmpFT.X:=rbLL.lng;
+    tmpFT.Y:=ltLL.lat;
+    tmpFT.SeekVertes(2);
+    tmpFT.X:=rbLL.lng;
+    tmpFT.Y:=rbLL.lat;
+    tmpFT.SeekVertes(3);
+    tmpFT.X:=ltLL.lng;
+    tmpFT.Y:=rbLL.lat;
+    tmpFT.SeekVertes(4);
+    tmpFT.X:=ltLL.lng;
+    tmpFT.Y:=ltLL.lat;
+    tmpFT.LabelText:=view_name;
+    WMTS_Client.FeatureLayerByName['视图框'].Features.AddFeature(tmpFT);
+    UpdateFeatureListEntry;
+  end;
+end;
+
 procedure TFormTileMerger.MenuItem_ViewShowGridClick(Sender: TObject);
 begin
   FTileViewer.ShowGrid:=not MenuItem_ViewShowGrid.Checked;
@@ -368,6 +411,13 @@ begin
     tmpLayer:=TWMTS_ParameterValue(DataObject).Owner.Owner.Owner.Owner; //so weird
     if FTileViewer.CurrentLayer<>tmpLayer then FTileViewer.CurrentLayer:=tmpLayer;
   end;
+  if DataObject is TWMTS_FeatureLayer then begin
+    //点选要素图层后的动作
+  end;
+  if DataObject is TAGeoFeature then begin
+    TileViewer.ZoomRect(TileViewer.CurrentTileMatrixSet.Projection.LatlongToXY(TAGeoFeature(DataObject).Boundary),1.0);
+    TileViewer.Refresh;
+  end;
 end;
 
 procedure TFormTileMerger.UpdateStatusBar(Sender: TObject);
@@ -440,9 +490,10 @@ begin
 end;
 
 procedure TFormTileMerger.UpdateFeatureListEntry;
-var root:TTreeNode;
+var root, feature_layer, feature_node:TTreeNode;
     tmpFeatureLayer:TWMTS_FeatureLayer;
-    idx,len:integer;
+    tmpFeature:TAGeoFeature;
+    idx,len,fidx, flen:integer;
 begin
   TreeView_wmts_list.BeginUpdate;
   try
@@ -454,7 +505,14 @@ begin
     len:=WMTS_Client.FeatureLayerCount;
     for idx:=0 to len-1 do begin
       tmpFeatureLayer:=WMTS_Client.FeatureLayers[idx];
-      TreeView_wmts_list.Items.AddChild(root, Format('%s (%d)',[tmpFeatureLayer.Title, tmpFeatureLayer.Features.Count])).Data:=tmpFeatureLayer;
+      flen:=tmpFeatureLayer.Features.Count;
+      feature_layer:=TreeView_wmts_list.Items.AddChild(root, Format('%s (%d)',[tmpFeatureLayer.Title, flen]));
+      feature_layer.Data:=tmpFeatureLayer;
+      for fidx:=0 to flen-1 do begin
+        tmpFeature:=TAGeoFeature(tmpFeatureLayer.Features.Items[fidx]);
+        feature_node:=TreeView_wmts_list.Items.AddChild(feature_layer, tmpFeature.LabelText);
+        feature_node.Data:=tmpFeature;
+      end;
     end;
   finally
     TreeView_wmts_list.EndUpdate;

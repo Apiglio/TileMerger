@@ -15,6 +15,12 @@ type
   EAGeoCoordinateDepthError = class(EAGeoError)
     constructor Create;
   end;
+  EAGeoEmptyError = class(EAGeoError)
+    constructor Create;
+  end;
+  EAGeoCoordinateOperationError = class(EAGeoError)
+    constructor Create;
+  end;
   EAGeoFeaturesCountError = class(EAGeoError)
     constructor Create;
   end;
@@ -32,6 +38,9 @@ type
   protected
     function GetLabelText:string;
     procedure SetLabelText(value:string);
+  public
+    function Centroid:TGeoPoint; virtual; abstract;
+    function Boundary:TGeoRectangle; virtual; abstract;
   public
     function WKT:string; virtual; abstract;
     function CSV:string; virtual; abstract;
@@ -53,6 +62,44 @@ type
     procedure SetY(value:Double);
     procedure SetZ(value:Double);
     procedure SetM(value:Double);
+  public
+    function Centroid:TGeoPoint; override;
+    function Boundary:TGeoRectangle; override;
+  public
+    function WKT:string; override;
+    function CSV:string; override;
+    function GeoJSON:TJSONData; override;
+    function EsriJSON:TJSONData; override;
+    class function EsriGeoCode:string; override;
+    constructor Create(ACoordinateDepth:Integer);
+    destructor Destroy; override;
+    property X:Double read GetX write SetX;
+    property Y:Double read GetY write SetY;
+    property Z:Double read GetZ write SetZ;
+    property M:Double read GetM write SetM;
+
+  end;
+
+  TAGeoPolyline = class(TAGeoFeature)
+  private
+    FCursor:Integer; //用于定位端点，以便使用XYZM
+    //暂不支持多线
+  protected
+    function GetX:Double;
+    function GetY:Double;
+    function GetZ:Double;
+    function GetM:Double;
+    procedure SetX(value:Double);
+    procedure SetY(value:Double);
+    procedure SetZ(value:Double);
+    procedure SetM(value:Double);
+  public
+    procedure AppendVertex(ANumberOfVertices:Integer);
+    function SeekVertes(VertexId:Integer):boolean;
+    property CountVertex:Integer read FCoordinateSize; //支持多线后修改
+  public
+    function Centroid:TGeoPoint; override;
+    function Boundary:TGeoRectangle; override;
   public
     function WKT:string; override;
     function CSV:string; override;
@@ -97,6 +144,18 @@ implementation
 constructor EAGeoCoordinateDepthError.Create;
 begin
   inherited Create('坐标深度错误');
+end;
+
+{ EAGeoEmptyError }
+constructor EAGeoEmptyError.Create;
+begin
+  inherited Create('坐标为空');
+end;
+
+{ EAGeoCoordinateOperationError }
+constructor EAGeoCoordinateOperationError.Create;
+begin
+  inherited Create('错误的坐标操作');
 end;
 
 { EAGeoFeaturesCountError }
@@ -193,6 +252,19 @@ begin
   (FCoordinates+3)^:=value;
 end;
 
+function TAGeoPointGeometry.Centroid:TGeoPoint;
+begin
+  result.x:=GetX;
+  result.y:=GetY;
+end;
+
+function TAGeoPointGeometry.Boundary:TGeoRectangle;
+begin
+  result.LeftTop.x:=GetX;
+  result.LeftTop.y:=GetY;
+  result.RightBottom:=result.LeftTop;
+end;
+
 function TAGeoPointGeometry.WKT:string;
 begin
   case FCoordinateDepth of
@@ -204,12 +276,11 @@ begin
 end;
 
 function TAGeoPointGeometry.CSV:string;
-const delimiter = ', ';
 var idx:integer;
 begin
   result:=GetLabelText;
   for idx:=0 to FCoordinateDepth-1 do begin
-    result:=result+delimiter+FloatToStr((FCoordinates+idx)^);
+    result:=result+', '+FloatToStr((FCoordinates+idx)^);
   end;
 end;
 
@@ -258,7 +329,7 @@ begin
   inherited Create;
   FCoordinateDepth:=ACoordinateDepth;
   FCoordinateSize:=1;
-  FCoordinates:=GetMem(FCoordinateSize*FCoordinateDepth*sizeof(Double));
+  FCoordinates:=AllocMem(FCoordinateSize*FCoordinateDepth*sizeof(Double));
 end;
 
 destructor TAGeoPointGeometry.Destroy;
@@ -266,6 +337,215 @@ begin
   FreeMem(FCoordinates, FCoordinateSize*FCoordinateDepth*sizeof(Double));
   inherited Destroy;
 end;
+
+
+{ TAGeoPolyline }
+
+function TAGeoPolyline.GetX:Double;
+begin
+  Result:=(FCoordinates+(FCursor*FCoordinateDepth))^;
+end;
+
+function TAGeoPolyline.GetY:Double;
+begin
+  Result:=(FCoordinates+(FCursor*FCoordinateDepth)+1)^;
+end;
+
+function TAGeoPolyline.GetZ:Double;
+begin
+  if FCoordinateDepth<3 then raise EAGeoCoordinateDepthError.Create;
+  Result:=(FCoordinates+(FCursor*FCoordinateDepth)+2)^;
+end;
+
+function TAGeoPolyline.GetM:Double;
+begin
+  if FCoordinateDepth<4 then raise EAGeoCoordinateDepthError.Create;
+  Result:=(FCoordinates+(FCursor*FCoordinateDepth)+3)^;
+end;
+
+procedure TAGeoPolyline.SetX(value:Double);
+begin
+  (FCoordinates+(FCursor*FCoordinateDepth))^:=value;
+end;
+
+procedure TAGeoPolyline.SetY(value:Double);
+begin
+  (FCoordinates+(FCursor*FCoordinateDepth)+1)^:=value;
+end;
+
+procedure TAGeoPolyline.SetZ(value:Double);
+begin
+  if FCoordinateDepth<3 then raise EAGeoCoordinateDepthError.Create;
+  (FCoordinates+(FCursor*FCoordinateDepth)+2)^:=value;
+end;
+
+procedure TAGeoPolyline.SetM(value:Double);
+begin
+  if FCoordinateDepth<4 then raise EAGeoCoordinateDepthError.Create;
+  (FCoordinates+(FCursor*FCoordinateDepth)+3)^:=value;
+end;
+
+procedure TAGeoPolyline.AppendVertex(ANumberOfVertices:Integer);
+begin
+  if ANumberOfVertices<=0 then raise EAGeoCoordinateOperationError.Create;
+  FCursor:=FCoordinateSize;
+  inc(FCoordinateSize,ANumberOfVertices);
+  FCoordinates:=ReAllocMem(FCoordinates,FCoordinateSize*FCoordinateDepth*sizeof(Double));
+end;
+
+function TAGeoPolyline.SeekVertes(VertexId:Integer):boolean;
+var vid:Integer;
+begin
+  result:=false;
+  vid:=VertexId;
+  if vid<0 then vid:=FCoordinateSize+vid;
+  if (vid<0) or (vid>=FCoordinateSize) then exit;
+  FCursor:=vid;
+  result:=true;
+end;
+
+function TAGeoPolyline.Centroid:TGeoPoint;
+begin
+  result:=Boundary.Centroid;
+end;
+
+function TAGeoPolyline.Boundary:TGeoRectangle;
+var xPos,yPos:double;
+begin
+  if FCoordinateSize<=0 then raise EAGeoEmptyError.Create;
+  FCursor:=0;
+  result.LeftTop.x:=GetX;
+  result.LeftTop.y:=GetY;
+  result.RightBottom:=result.LeftTop;
+  inc(FCursor);
+  while FCursor<FCoordinateSize do begin
+    xPos:=GetX;
+    yPos:=GetY;
+    if result.LeftTop.x>xPos then
+      result.LeftTop.x:=xPos
+    else if result.RightBottom.x<xPos then
+      result.RightBottom.x:=xPos;
+    if result.LeftTop.y<yPos then
+      result.LeftTop.y:=yPos
+    else if result.RightBottom.y>yPos then
+      result.RightBottom.y:=yPos;
+    inc(FCursor);
+  end;
+end;
+
+function TAGeoPolyline.WKT:string;
+var vert,dimn:integer;
+begin
+  case FCoordinateDepth of
+    2:result:='LineString (';
+    3:result:='LineString Z (';
+    4:result:='LineString ZM (';
+    else raise EAGeoCoordinateDepthError.Create;
+  end;
+  for vert:=0 to FCoordinateSize-1 do begin
+    for dimn:=0 to FCoordinateDepth-1 do begin
+      result:=result+FloatToStr((FCoordinates+FCoordinateDepth*vert+dimn)^);
+      if dimn<>FCoordinateDepth-1 then result:=result+' '
+      else if vert<>FCoordinateSize-1 then result:=result+', '
+      else ;
+    end;
+  end;
+  result:=result+')'
+end;
+
+function TAGeoPolyline.CSV:string;
+begin
+  result:=Format('"%s", "%s"',[GetLabelText,WKT]);
+end;
+
+//由Gemini编写
+function TAGeoPolyline.GeoJSON: TJSONData;
+var resultObject, geom, prop: TJSONObject;
+    coords, pointCoords: TJSONArray;
+    idx: Integer;
+begin
+  resultObject := TJSONObject.Create;
+  resultObject.Strings['type'] := 'Feature';
+
+  geom := TJSONObject.Create;
+  geom.Strings['type'] := 'LineString';
+
+  coords := TJSONArray.Create;
+  for idx := 0 to FCoordinateSize - 1 do begin
+    FCursor := idx;
+    pointCoords := TJSONArray.Create;
+    pointCoords.Add(GetX);
+    pointCoords.Add(GetY);
+    if FCoordinateDepth >= 3 then pointCoords.Add(GetZ);
+
+    coords.Add(pointCoords);
+  end;
+  geom.Arrays['coordinates'] := coords;
+  resultObject.Objects['geometry'] := geom;
+
+  prop := TJSONObject.Create;
+  prop.Strings['name'] := GetLabelText;
+  resultObject.Objects['properties'] := prop;
+
+  Result := resultObject;
+end;
+
+//由Gemini编写
+function TAGeoPolyline.EsriJSON: TJSONData;
+var resultObject, geom, attr: TJSONObject;
+    paths, singlePath, pointCoords: TJSONArray;
+    idx: Integer;
+begin
+  resultObject := TJSONObject.Create;
+
+  attr := TJSONObject.Create;
+  attr.Integers['FID'] := 0;
+  attr.Strings['name'] := GetLabelText;
+  resultObject.Objects['attributes'] := attr;
+
+  geom := TJSONObject.Create;
+  paths := TJSONArray.Create;
+  singlePath := TJSONArray.Create;
+
+  for idx := 0 to FCoordinateSize - 1 do begin
+    FCursor := idx;
+    pointCoords := TJSONArray.Create;
+    pointCoords.Add(GetX);
+    pointCoords.Add(GetY);
+    if (FCoordinateDepth >= 3) then pointCoords.Add(GetZ);
+    singlePath.Add(pointCoords);
+  end;
+
+  paths.Add(singlePath);
+  geom.Arrays['paths'] := paths;
+
+  if FCoordinateDepth >= 3 then geom.Booleans['hasZ'] := True;
+  if FCoordinateDepth >= 4 then geom.Booleans['hasM'] := True;
+
+  resultObject.Objects['geometry'] := geom;
+  Result := resultObject;
+end;
+
+class function TAGeoPolyline.EsriGeoCode:string;
+begin
+  result:='esriGeometryPolyline';
+end;
+
+constructor TAGeoPolyline.Create(ACoordinateDepth:Integer);
+begin
+  if (ACoordinateDepth<2) or (ACoordinateDepth>4) then raise EAGeoCoordinateDepthError.Create;
+  inherited Create;
+  FCoordinateDepth:=ACoordinateDepth;
+  FCoordinateSize:=0;
+  FCoordinates:=nil;
+end;
+
+destructor TAGeoPolyline.Destroy;
+begin
+  FreeMem(FCoordinates, FCoordinateSize*FCoordinateDepth*sizeof(Double));
+  inherited Destroy;
+end;
+
 
 
 { TAGeoFeatures }
@@ -304,8 +584,9 @@ begin
   try
     //判断要素类型
     tmpFT:=TAGeoFeature(FFeatureList.Items[0]);
-    case TAGeoFeatures(tmpFT).ClassName of
-      'TAGeoPointGeometry': lines.Add('name, lng, lat');
+    case TAGeoFeature(tmpFT).ClassName of
+      'TAGeoPointGeometry': lines.Add('"name", "lng", "lat"');
+      'TAGeoPolyline':      lines.Add('"name", "wkt"');
       else raise EAGeoFeaturesTypeError.Create;
     end;
     //创建文件内容
