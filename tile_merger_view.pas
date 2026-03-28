@@ -91,11 +91,17 @@ type
     FCachePath:String; // 网络下载的瓦片暂存位置
     PTileViewer:TObject;
     FThreadList:TList; // 只保存TileList中的Thread，下载完成后就移出
-    FDownloading:Integer;
+    FRunning:Integer;
+    FWaiting:Integer;
+    FInTotal:Integer;
+    FOnProgress:TNotifyEvent;
+    FOnTaskStart:TNotifyEvent;
+    FOnTaskEnd:TNotifyEvent;
   public
     MaxDownloadThread:Integer;
   private
     function FetchTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
+    function GetCountFetched:Integer;
   public
     function GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
     procedure Clear;
@@ -103,6 +109,15 @@ type
   public
     constructor Create(AOwner:TObject);
     destructor Destroy; override;
+    procedure StartTask;
+    procedure EndTask;
+    property CountWaitingTask:Integer read FWaiting;
+    property CountRunningTask:Integer read FRunning;
+    property CountInTotalTask:Integer read FInTotal;
+    property CountFetchedTask:Integer read GetCountFetched;
+    property OnProgress:TNotifyEvent read FOnProgress write FOnProgress; //在FetchThread中Synchronize
+    property OnTaskStart:TNotifyEvent read FOnTaskStart;
+    property OnTaskEnd:TNotifyEvent read FOnTaskEnd;
   end;
 
   TFetchTileResult = (ftrError, ftrCache, ftrWmtsFail, ftrFmtError, ftrSaved, ftrConflict);
@@ -562,7 +577,9 @@ begin
   Form_Debug.AddMessage(FUrl);
   //}
   if FOwnerPool<>nil then with FOwnerPool do begin
-    inc(FDownloading);
+    inc(FRunning);
+    dec(FWaiting);
+    if FOnProgress<>nil then FOnProgress(FOwnerPool);
   end;
   FStartTime:=Now;
 end;
@@ -581,23 +598,27 @@ begin
     if PTile.OnReady<>nil then PTile.OnReady(PTile);
   end;
   if FOwnerPool<>nil then with FOwnerPool do begin
-    dec(FDownloading);
+    dec(FRunning);
     //FOwnerPool.FThreadList.Remove(Self); //不要remove，用nil表示已完成
     index:=FOwnerPool.FThreadList.IndexOf(Self);
     count_rest:=FThreadList.Count;
     if (index>=0) and (index<count_rest) then FThreadList[index]:=nil;
-    if FDownloading<MaxDownloadThread then begin
+    if FRunning<MaxDownloadThread then begin
       while count_rest>0 do begin
         next_thread:=TFetchTileThread(FThreadList[count_rest-1]);
         if next_thread<>nil then begin
           next_thread.Start;
+          dec(FWaiting);
+          inc(FRunning);
           break;
         end;
         FThreadList.Delete(count_rest-1);
         dec(count_rest);
       end;
+      if (count_rest<=0) and (FOwnerPool.FOnTaskEnd<>nil) then FOwnerPool.FOnTaskEnd(FOwnerPool);
     end;
   end;
+  if FOwnerPool.FOnProgress<>nil then FOwnerPool.FOnProgress(Self.FOwnerPool);
 end;
 
 procedure TFetchTileThread.Execute;
@@ -677,10 +698,21 @@ begin
     thread:=TFetchTileThread.Create(result,aLayer.URL(aTileMatrix, normRow, normCol),TTileViewer(PTileViewer).FForceFetchTile);
     thread.FOwnerPool:=Self;
     FThreadList.Add(thread);
-    if FDownloading<MaxDownloadThread then thread.Start;
+    inc(FInTotal);
+    if FRunning<MaxDownloadThread then begin
+      thread.Start;
+      inc(FRunning);
+    end else begin
+      inc(FWaiting);
+    end;
   end else begin
     //FEnabled:=true;
   end;
+end;
+
+function TTileViewerPool.GetCountFetched:Integer;
+begin
+  result:=FInTotal - FRunning - FWaiting;
 end;
 
 function TTileViewerPool.GetTile(aLayer:TWMTS_Layer;aTileMatrix:TWMTS_TileMatrix;aRow,aCol:integer):TTile;
@@ -688,11 +720,6 @@ label NEXT;
 var idx,len:integer;
     tmpTile:TTile;
 begin
-  FDownloading:=0;
-  if FThreadList.Count>0 then begin
-    //这里缺一个对遗留线程的清理
-  end;
-  FThreadList.Clear;
 
   //想办法改一种访问更快的散列表
   //因为像福建天地图历史影像这种图源会提供错误的MatrixWidth/Height，所以不再通过这个参数控制瓦片坐标超界
@@ -718,8 +745,10 @@ begin
       TTile(FTileList[idx]).Free;
       result:=FetchTile(aLayer,aTileMatrix,aRow,aCol);
       FTileList[idx]:=result;
-    end else
+    end else begin
       result:=TTile(FTileList[idx]);
+      inc(FInTotal);
+    end;
   end;
 end;
 
@@ -739,6 +768,12 @@ begin
   FCachePath:='TilesCache';
   PTileViewer:=AOwner;
   MaxDownloadThread:=100;
+  FRunning:=0;
+  FWaiting:=0;
+  FInTotal:=0;
+  FOnProgress:=nil;
+  FOnTaskStart:=nil;
+  FOnTaskEnd:=nil;
 end;
 
 destructor TTileViewerPool.Destroy;
@@ -748,6 +783,30 @@ begin
   FThreadList.Free;
   inherited Destroy;
 end;
+
+procedure TTileViewerPool.StartTask;
+var idx,len:Integer;
+    thread:TFetchTileThread;
+begin
+  FRunning:=0;
+  FWaiting:=0;
+  FInTotal:=0;
+  len:=FThreadList.Count;
+  {
+  for idx:=len-1 downto 0 do begin
+    thread:=TFetchTileThread(FThreadList.Items[idx]);
+    if thread.Suspended then thread.Terminate;
+  end;
+  }
+  FThreadList.Clear;
+  if FOnTaskStart<>nil then FOnTaskStart(Self);
+end;
+
+procedure TTileViewerPool.EndTask;
+begin
+  if FOnTaskEnd<>nil then FOnTaskEnd(Self);
+end;
+
 
 
 
@@ -1647,6 +1706,8 @@ var c1,c2,r1,r2,col,row:integer;
     massive_download_result:TModalResult;
 begin
   //TilePool.Clear; //不清空了，所有瓦片都留在池内
+  TilePool.StartTask;
+
   if AScale<=0 then
       bestTM:=CurrentTileMatrixSet.BestFitTileMatrix(FScaleX)
   else

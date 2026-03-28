@@ -25,6 +25,7 @@ type
     Label_TileMatrix: TLabel;
     ListBox_TileMatrix: TListBox;
     ProgressBar_Export: TProgressBar;
+    ProgressBar_Export_Done: TProgressBar;
     SaveDialog_Export: TSaveDialog;
     procedure Button_DownloadTilesClick(Sender: TObject);
     procedure Button_MergeTilesClick(Sender: TObject);
@@ -33,6 +34,8 @@ type
     PTileViewer:TTileViewer;
   public
     procedure Execute(aTileViewer:TTileViewer;aLayer:TWMTS_Layer;aTileMatrixSet:TWMTS_TileMatrixSet);
+  public
+    procedure TilePoolProgress(Sender:TObject);
   end;
 
 var
@@ -50,6 +53,8 @@ begin
 
   PTileViewer.TilePool.Clear;
   PTileViewer.ShowTiles(tmpTM.Scale);
+
+  PTileViewer.TilePool.OnProgress:=@Self.TilePoolProgress;
 
 end;
 
@@ -87,6 +92,17 @@ begin
   ListBox_TileMatrix.ItemIndex:=0;
   ShowModal;
 
+end;
+
+procedure TForm_ExportTiff.TilePoolProgress(Sender:TObject);
+begin
+  with Sender as TTileViewerPool do begin
+    ProgressBar_Export.Max:=CountInTotalTask;
+    ProgressBar_Export.Position:=CountInTotalTask - CountWaitingTask;
+    ProgressBar_Export_Done.Max:=CountInTotalTask;
+    ProgressBar_Export_Done.Position:=CountFetchedTask;
+
+  end;
 end;
 
 end.
